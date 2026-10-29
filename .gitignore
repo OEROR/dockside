@@ -1,0 +1,21 @@
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+# signing secrets
+keystore.properties
+*.jks
+*.keystore
+/dist/
+# Paparazzi output (time-dependent); curated copies live in docs/screenshots
+/app/src/test/snapshots/
+# Private reference screenshots (other vendors' UI and personal photos): never publish
+/Скрины/
+/Screenshots-reference/

@@ -1,0 +1,14 @@
+Dockside bundles the following third-party material:
+
+- Nunito font (app/src/main/res/font/nunito.ttf), Copyright 2014 The Nunito Project Authors,
+  SIL Open Font License 1.1 — see licenses/OFL-Nunito.txt
+- Fredoka font (app/src/main/res/font/fredoka.ttf), Copyright 2016 The Fredoka Project Authors,
+  SIL Open Font License 1.1 — see licenses/OFL-Fredoka.txt
+- Oswald font (app/src/main/res/font/oswald.ttf), Copyright 2016 The Oswald Project Authors,
+  SIL Open Font License 1.1 — see licenses/OFL-Oswald.txt
+- Unbounded font (app/src/main/res/font/unbounded.ttf), Copyright 2022 The Unbounded Project Authors,
+  SIL Open Font License 1.1 — see licenses/OFL-Unbounded.txt
+- World land mask (app/src/main/java/io/github/dockside/ui/clocks/WorldMapData.kt), derived from
+  Natural Earth 1:110m land polygons, public domain — https://www.naturalearthdata.com
+
+Weather data is fetched at runtime from Open-Meteo (https://open-meteo.com), CC BY 4.0.

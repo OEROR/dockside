@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- landscape device body -->
+    <path android:fillColor="#FF2A2A33"
+        android:pathData="M28,38h52a8,8 0,0 1,8 8v16a8,8 0,0 1,-8 8h-52a8,8 0,0 1,-8 -8v-16a8,8 0,0 1,8 -8z" />
+    <path android:fillColor="#FF000000"
+        android:pathData="M29,41h50a6,6 0,0 1,6 6v14a6,6 0,0 1,-6 6h-50a6,6 0,0 1,-6 -6v-14a6,6 0,0 1,6 -6z" />
+    <!-- clock dial -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M42,45a9,9 0,1 1,0 18a9,9 0,1 1,0 -18z" />
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.8" android:strokeLineCap="round"
+        android:pathData="M42,54L42,48.5M42,54L46,56" />
+    <path android:fillColor="#FFFF7A1A"
+        android:pathData="M42,53a1,1 0,1 1,0 2a1,1 0,1 1,0 -2z" />
+    <!-- crescent moon -->
+    <path android:fillColor="#FFFF453A"
+        android:pathData="M68,46a8,8 0,1 0,8 10a6.2,6.2 0,1 1,-8 -10z" />
+    <!-- charging cable -->
+    <path android:strokeColor="#FF2A2A33" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M88,54h8" />
+</vector>
