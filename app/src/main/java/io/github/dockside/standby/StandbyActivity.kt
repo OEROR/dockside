@@ -101,6 +101,13 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
         finish()
     }
 
+    override fun finish() {
+        super.finish()
+        // fade out instead of the default slide, whichever way Dockside is closed
+        @Suppress("DEPRECATION")
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     companion object {
         /** Opened from settings: stay open even when not charging or held upright. */
         const val EXTRA_PREVIEW = "preview"

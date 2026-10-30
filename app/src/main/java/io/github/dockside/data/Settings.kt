@@ -87,10 +87,29 @@ data class AppSettings(
     val worldCities: List<String> = listOf("America/Los_Angeles", "America/New_York", "Europe/London", "Asia/Tokyo"),
     val manualLocation: ManualLocation? = null,
     val tempUnit: TempUnit = TempUnit.CELSIUS,
+    val motion: MotionPrefs = MotionPrefs(),
 ) {
     fun colorIndex(style: ClockStyle) = clockColors[style] ?: defaultColor(style)
 
 }
+
+/**
+ * "Super animations": one master switch plus a switch per effect, so slower phones (or people
+ * who prefer a calmer screen) can turn any of them off.
+ */
+data class MotionPrefs(
+    val enabled: Boolean = true,
+    /** The player grows out of its bubble; Dockside fades in and out instead of cutting. */
+    val screens: Boolean = true,
+    /** Pages turn like cards while swiping between widgets, photos and clocks. */
+    val pages: Boolean = true,
+    /** The blurred cover behind the player drifts slowly. */
+    val backdrop: Boolean = true,
+    /** Digits and widgets settle with a little bounce. */
+    val springs: Boolean = true,
+    /** The clock digits float about all the time, clearly visible (off by default: calmer). */
+    val floating: Boolean = false,
+)
 
 class SettingsStore private constructor(context: Context) {
     private val prefs = context.getSharedPreferences("dockside", Context.MODE_PRIVATE)
@@ -161,6 +180,9 @@ class SettingsStore private constructor(context: Context) {
                 JSONObject().put("name", it.name).put("lat", it.lat).put("lon", it.lon)
             })
             .put("tempUnit", s.tempUnit.name)
+            .put("motion", JSONObject()
+                .put("enabled", s.motion.enabled).put("screens", s.motion.screens).put("pages", s.motion.pages)
+                .put("backdrop", s.motion.backdrop).put("springs", s.motion.springs).put("floating", s.motion.floating))
 
         fun fromJson(o: JSONObject): AppSettings {
             val d = AppSettings()
@@ -193,6 +215,14 @@ class SettingsStore private constructor(context: Context) {
                     ManualLocation(it.optString("name"), it.optDouble("lat"), it.optDouble("lon"))
                 },
                 tempUnit = enumOrNull<TempUnit>(o.optString("tempUnit")) ?: d.tempUnit,
+                motion = o.optJSONObject("motion")?.let { m ->
+                    val dm = d.motion
+                    MotionPrefs(
+                        enabled = m.optBoolean("enabled", dm.enabled), screens = m.optBoolean("screens", dm.screens),
+                        pages = m.optBoolean("pages", dm.pages), backdrop = m.optBoolean("backdrop", dm.backdrop),
+                        springs = m.optBoolean("springs", dm.springs), floating = m.optBoolean("floating", dm.floating),
+                    )
+                } ?: d.motion,
             )
         }
 

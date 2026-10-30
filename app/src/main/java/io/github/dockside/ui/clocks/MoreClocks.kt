@@ -24,6 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import io.github.dockside.ui.common.digitFloat
+import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.ui.common.springOr
 import io.github.dockside.ui.common.softGlow
 import androidx.compose.animation.core.spring
 import io.github.dockside.ui.common.stagger
@@ -46,7 +48,11 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextGeometricTransform
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.dockside.ui.common.CondensedFamily
@@ -189,7 +195,7 @@ fun GradientClock(wash: Palette.Wash, info: ClockInfo, modifier: Modifier = Modi
         RollingText(
             text,
             TextStyle(
-                color = wash.digits, fontFamily = WideFamily, fontWeight = FontWeight.Normal,
+                color = wash.digits, fontFamily = WideFamily, fontWeight = FontWeight.Medium,
                 fontSize = pxToSp(sizePx), lineHeight = pxToSp(sizePx * 1.1f),
                 shadow = androidx.compose.ui.graphics.Shadow(wash.dark.copy(alpha = 0.35f), Offset(0f, sizePx * 0.02f), sizePx * 0.08f),
             ),
@@ -235,54 +241,90 @@ fun TallClock(accent: Color, info: ClockInfo, modifier: Modifier = Modifier) {
         val hPx = constraints.maxHeight.toFloat()
         val wPx = constraints.maxWidth.toFloat()
         val text = TimeText.time(t, info.h24)
-        // Oswald figures are roughly 0.47 em wide and 0.8 em tall.
-        val sizePx = min(hPx * 1.02f, wPx * 0.70f / (text.length * 0.47f))
+        // Oswald figures, narrowed to 82 %, are about 0.44 em wide; the round colon takes 0.2 em.
+        // The figures should fill about 72 % of the height.
+        val narrow = 0.82f
+        val digits = text.count { it != ':' }
+        val sizePx = min(hPx * 0.72f / FIGURE_HEIGHT, wPx * 0.66f / (digits * 0.44f + 0.2f))
         val style = TextStyle(
             color = accent, fontFamily = CondensedFamily, fontWeight = FontWeight.Medium,
-            fontSize = pxToSp(sizePx), lineHeight = pxToSp(sizePx),
-            lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+            fontSize = pxToSp(sizePx), textGeometricTransform = TextGeometricTransform(scaleX = narrow),
         )
         val frame = rememberFrameTime()
         val intro = LocalIntro.current
-        Row(Modifier.align(Alignment.CenterStart).padding(start = 40.dp)) {
-            text.forEachIndexed { i, ch ->
-                AnimatedContent(
-                    targetState = ch,
-                    // digits slide in from the left one by one on arrival and lean gently
-                    modifier = Modifier.graphicsLayer {
+        val springs = LocalMotion.current.springs
+        val range = LocalMotion.current.floatRange
+        val small = TextStyle(color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.SemiBold, fontSize = pxToSp(hPx * 0.07f))
+        // the time and, top right of it, the date, centred together
+        Row(Modifier.align(Alignment.Center)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                text.forEachIndexed { i, ch ->
+                    // digits slide in from the left one by one on arrival, then float gently
+                    val layer = Modifier.graphicsLayer {
                         val p = stagger(intro.value, i, text.length, 0.1f)
                         alpha = p
                         translationX = (1f - p) * -size.width * 1.2f
-                        val (fx, fy, fr) = digitFloat(frame.value, i)
-                        translationX += fx * size.width * 0.05f
-                        translationY = fy * size.height * 0.025f
-                        rotationZ = fr * 1.5f
-                    },
-                    transitionSpec = {
-                        (slideInHorizontally(spring(dampingRatio = 0.7f, stiffness = 220f)) { -it / 2 } + fadeIn(tween(500))) togetherWith
-                            (slideOutHorizontally(tween(1400, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(1400))) using
-                            SizeTransform(clip = false)
-                    },
-                    label = "tall$i",
-                ) { c -> Text(c.toString(), style = style, softWrap = false) }
+                        val (fx, fy, _) = digitFloat(frame.value, i)
+                        translationX += fx * size.width * 0.04f * range
+                        translationY = fy * size.height * 0.02f * range
+                    }
+                    if (ch == ':') {
+                        RoundColon(accent, sizePx, layer)
+                        return@forEachIndexed
+                    }
+                    AnimatedContent(
+                        targetState = ch,
+                        modifier = layer,
+                        transitionSpec = {
+                            (slideInHorizontally(springOr(springs, spring(dampingRatio = 0.7f, stiffness = 220f))) { -it / 2 } + fadeIn(tween(500))) togetherWith
+                                (slideOutHorizontally(tween(1400, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(1400))) using
+                                SizeTransform(clip = false)
+                        },
+                        label = "tall$i",
+                    ) { c -> Text(c.toString(), style = style, softWrap = false, modifier = Modifier.figureBox(sizePx)) }
+                }
             }
-        }
-        val small = TextStyle(color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.Bold, fontSize = pxToSp(hPx * 0.07f))
-        Column(Modifier.align(Alignment.TopEnd).padding(end = 48.dp, top = 28.dp)) {
-            Text(
-                buildAnnotatedString {
-                    withStyle(SpanStyle(color = accent)) { append(TimeText.weekdayShort(t).uppercase()) }
-                    append(" " + t.dayOfMonth)
-                },
-                style = small,
-            )
-            info.temperature?.let { Text(it, style = small) }
-            info.alarm?.let {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Glyphs.Alarm, null, tint = Palette.Gray, modifier = Modifier.size(with(LocalDensity.current) { (hPx * 0.05f).toDp() }))
-                    Text(" $it", style = small.copy(color = Palette.Gray, fontSize = small.fontSize * 0.8f))
+            Column(Modifier.padding(start = with(LocalDensity.current) { (sizePx * 0.12f).toDp() })) {
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = accent)) { append(TimeText.weekdayShort(t).uppercase()) }
+                        append(" " + t.dayOfMonth)
+                    },
+                    style = small,
+                )
+                info.temperature?.let { Text(it, style = small) }
+                info.alarm?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Glyphs.Alarm, null, tint = Palette.Gray, modifier = Modifier.size(with(LocalDensity.current) { (hPx * 0.05f).toDp() }))
+                        Text(" $it", style = small.copy(color = Palette.Gray, fontSize = small.fontSize * 0.8f))
+                    }
                 }
             }
         }
+    }
+}
+
+/** Oswald's figures run from 0.82 em above the baseline to just below it. */
+private const val FIGURE_HEIGHT = 0.83f
+
+/**
+ * Sizes a line of Oswald figures to the figures themselves, not to the font's line box, whose
+ * tall ascent would push the digits well below centre.
+ */
+private fun Modifier.figureBox(sizePx: Float) = layout { measurable, constraints ->
+    val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+    val top = (sizePx * 0.82f).roundToInt()
+    val h = (sizePx * FIGURE_HEIGHT).roundToInt()
+    layout(p.width, h) { p.place(0, top - p[FirstBaseline]) }
+}
+
+/** Two round dots sized to the Oswald figures, in place of the font's square colon. */
+@Composable
+private fun RoundColon(color: Color, sizePx: Float, modifier: Modifier) {
+    val d = LocalDensity.current
+    Canvas(modifier.size(with(d) { (sizePx * 0.2f).toDp() }, with(d) { (sizePx * FIGURE_HEIGHT).toDp() })) {
+        val r = size.width * 0.38f
+        drawCircle(color, r, Offset(center.x, size.height * 0.29f))
+        drawCircle(color, r, Offset(center.x, size.height * 0.76f))
     }
 }

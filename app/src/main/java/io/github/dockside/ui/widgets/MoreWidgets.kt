@@ -92,20 +92,19 @@ internal fun SquareClockWidget() {
                     val isMajor = i % 5 == 0
                     // pull the corner marks in a little so they follow the rounded corners
                     val d = min(squareEdge(a, inner), inner * 1.22f)
-                    val from = c + ray(a, d - if (isMajor) s * 0.075f else s * 0.035f)
+                    val from = c + ray(a, d - if (isMajor) s * 0.1f else s * 0.04f)
                     val to = c + ray(a, d)
                     (if (isMajor) major else minor).apply { moveTo(from.x, from.y); lineTo(to.x, to.y) }
                 }
-                val numeral = TextStyle(color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.Bold, fontSize = (s * 0.12f).toSp())
+                val numeral = TextStyle(color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.ExtraBold, fontSize = (s * 0.15f).toSp())
                 val numerals = listOf(12, 3, 6, 9).map { n ->
                     val layout = measurer.measure(n.toString(), numeral)
-                    val p = c + ray(n / 12f * 2 * PI.toFloat(), inner * 0.66f)
+                    val p = c + ray(n / 12f * 2 * PI.toFloat(), inner * 0.62f)
                     layout to Offset(p.x - layout.size.width / 2f, p.y - layout.size.height / 2f)
                 }
                 onDrawBehind {
-                    drawRoundRect(Palette.Card, Offset(c.x - half, c.y - half), Size(s, s), CornerRadius(s * 0.2f))
-                    drawPath(minor, Color.White.copy(alpha = 0.35f), style = Stroke(s * 0.008f, cap = StrokeCap.Round))
-                    drawPath(major, Color.White, style = Stroke(s * 0.014f, cap = StrokeCap.Round))
+                    drawPath(minor, Color.White.copy(alpha = 0.4f), style = Stroke(s * 0.01f, cap = StrokeCap.Round))
+                    drawPath(major, Color.White, style = Stroke(s * 0.013f, cap = StrokeCap.Round))
                     numerals.forEach { (layout, at) -> drawText(layout, topLeft = at) }
                 }
             }
@@ -119,12 +118,13 @@ internal fun SquareClockWidget() {
             val sec = t.second + (now % 1000) / 1000f
             val min = t.minute + sec / 60f
             val hour = t.hour % 12 + min / 60f
-            drawHand(hour / 12f, inner * 0.52f, s * 0.035f, Color.White, c)
-            drawHand(min / 60f, inner * 0.82f, s * 0.028f, Color.White, c)
+            drawHand(hour / 12f, inner * 0.52f, s * 0.04f, Color.White, c)
+            drawHand(min / 60f, inner * 0.82f, s * 0.032f, Color.White, c)
+            drawCircle(Color.White, s * 0.035f, c)
             val sa = sec / 60f * 2 * PI.toFloat()
             drawLine(Palette.Orange, c - ray(sa, inner * 0.14f), c + ray(sa, inner * 0.9f), strokeWidth = s * 0.008f, cap = StrokeCap.Round)
             drawCircle(Palette.Orange, s * 0.022f, c)
-            drawCircle(Palette.Card, s * 0.009f, c)
+            drawCircle(Color.Black, s * 0.009f, c)
         }
     }
 }
@@ -180,7 +180,7 @@ internal fun CityTimeWidget(settings: AppSettings, data: StandbyData) {
 }
 
 /** "Los Angeles" → "LA", "Tokyo" → "TOK". */
-private fun cityCode(name: String): String {
+internal fun cityCode(name: String): String {
     val words = name.split(' ', '-').filter { it.isNotBlank() }
     return (if (words.size > 1) words.joinToString("") { it.take(1) } else name.take(3)).uppercase()
 }
@@ -204,7 +204,7 @@ internal fun DevicesWidget(data: StandbyData) {
     val rings = (listOf(phone) + accessories.map { Ring(it.level, false, it.kind) }).take(4)
     BoxWithConstraints(Modifier.fillMaxSize().padding(10.dp)) {
         val m = metrics()
-        val cell = m.dp(0.44f)
+        val cell = m.dp(0.46f)
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
             for (row in 0 until 2) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {

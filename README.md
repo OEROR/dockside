@@ -24,7 +24,8 @@ Dockside is an independent, open-source bedside mode for Android, inspired by th
 | **Night Mode** | The whole screen fades to a deep red so it doesn't dazzle at night. Choose in Settings: **with the light sensor** (default: red only in a dark room, full colour otherwise and when the phone has no working light sensor), **on a schedule** (23:00–6:00) or **off**. The settings screen shows the live light reading. |
 | **Display** | *Turn display off*: **Automatically** (in a dark, still room), **After 20 seconds**, or **Never**. **Motion to Wake** uses the accelerometer. |
 | **Full-screen notifications** | New notifications appear as large cards. The **Show Preview on Tap Only** setting hides their content until tapped. |
-| **Now Playing** | When playback starts, a full-screen player with artwork, progress and controls appears. Drag or tap the progress bar to jump within the track (also in the Now Playing widget). Close the player and the music shrinks into a small dark circle at the top of the screen whose bars move with the music's loudness, in a colour taken from the cover; tap it to bring the player back. |
+| **Now Playing** | When playback starts, a full-screen player grows out of the bubble at the top: large artwork over a blurred, slowly drifting copy of the cover, a volume slider, progress and controls. Drag or tap the progress bar to jump within the track (also in the Now Playing widget). Close the player and the music shrinks into a small dark circle at the top of the screen whose bars move with the music's loudness, in a colour taken from the cover; tap it to bring the player back. |
+| **Super animations** | On by default, each effect with its own switch: the player opens from and closes into its bubble, Dockside fades in and out, pages turn like cards while swiping, the player background drifts, digits and widgets settle with a little bounce. *Floating digits* (off by default) makes the clock digits drift about all the time, clearly visible. |
 | **Per-charger memory** | The last view is remembered per charger type (AC, USB, wireless, dock). |
 | **Screen saver** | Dockside is also an Android **screen saver (Daydream)**, so the system can start it by itself while charging or docked. |
 | **Languages** | English, Russian |
@@ -45,6 +46,7 @@ Dockside is an independent, open-source bedside mode for Android, inspired by th
 | ![Tall clock](docs/screenshots/clock-tall.png) | ![Photos overlay](docs/screenshots/photos.png) |
 | ![Square clock and city time](docs/screenshots/square-city.png) | ![Device batteries and weather](docs/screenshots/devices-weather.png) |
 | ![Collapsed Now Playing](docs/screenshots/now-playing-bubble.png) | ![Device pictograms](docs/screenshots/device-icons.png) |
+| ![Now Playing with a cover](docs/screenshots/now-playing-cover.png) | |
 
 The screenshots are rendered by the Paparazzi tests in [`ScreenshotTest.kt`](app/src/test/java/io/github/dockside/ScreenshotTest.kt). The Night Mode image applies the app's own red colour matrix to a screenshot.
 
@@ -118,7 +120,7 @@ Android has no system hook for this mode, so Dockside watches the activation con
 ## Credits & licences
 
 - Code: [MIT](LICENSE).
-- Fonts: [Nunito](https://github.com/googlefonts/nunito), [Fredoka](https://github.com/hafontia/Fredoka-One), [Oswald](https://github.com/googlefonts/OswaldFont) and [Unbounded](https://github.com/googlefonts/unbounded), all under the SIL Open Font License 1.1 ([licenses/](licenses)).
+- Fonts: [Nunito](https://github.com/googlefonts/nunito), [Fredoka](https://github.com/hafontia/Fredoka-One), [Oswald](https://github.com/googlefonts/OswaldFont) and [Unbounded](https://github.com/googlefonts/unbounded), all under the SIL Open Font License 1.1 ([licenses/](licenses)). Bundled as static instances of the variable fonts (Unbounded subset to Latin).
 - World map: [Natural Earth](https://www.naturalearthdata.com) 1:110m land, public domain.
 - Weather: [Open-Meteo](https://open-meteo.com) (CC BY 4.0 data).
 - Icons: drawn for this project.
@@ -129,4 +131,4 @@ Android has no system hook for this mode, so Dockside watches the activation con
 
 ### Кратко по-русски
 
-**Dockside** — независимый прикроватный режим для Android с открытым кодом. Когда телефон заряжается, лежит боком и заблокирован, он превращается в прикроватные часы с виджетами, фоторамкой и восемью циферблатами. В темноте экран становится красным. Свайп вбок переключает экраны, свайп вверх или вниз меняет виджет, альбом или циферблат. Долгое нажатие открывает редактирование. Сборка: `./gradlew assembleDebug`. Готовый APK — в разделе Releases.
+**Dockside** — независимый прикроватный режим для Android с открытым кодом. Когда телефон заряжается, лежит боком и заблокирован, он превращается в прикроватные часы с виджетами, фоторамкой и восемью циферблатами. В темноте экран становится красным. Свайп вбок переключает экраны, свайп вверх или вниз меняет виджет, альбом или циферблат. Долгое нажатие открывает редактирование. В настройках есть раздел «Анимации»: плавные экраны, объёмное листание, живой фон плеера, пружинистые цифры и (выключено по умолчанию) постоянно плавающие цифры. Сборка: `./gradlew assembleDebug`. Готовый APK — в разделе Releases.

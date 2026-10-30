@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -144,6 +145,21 @@ class ScreenshotTest {
     }
     @Test fun deviceIcons() = shot { io.github.dockside.ui.widgets.DeviceIconsPreview() }
     @Test fun nowPlaying() = shot { NowPlayingFull(data.media!!) {} }
+
+    /** A drawn stand-in cover (warm sunset blocks) to show the blurred backdrop. */
+    @Test fun nowPlayingCover() = shot {
+        val art = android.graphics.Bitmap.createBitmap(240, 240, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            val c = android.graphics.Canvas(this)
+            c.drawColor(0xFF3B2A3A.toInt())
+            val paint = android.graphics.Paint()
+            paint.color = 0xFFE07A5F.toInt(); c.drawRect(30f, 60f, 120f, 220f, paint)
+            paint.color = 0xFFF2CC8F.toInt(); c.drawRect(130f, 40f, 210f, 160f, paint)
+            paint.color = 0xFF81B29A.toInt(); c.drawCircle(170f, 200f, 30f, paint)
+        }
+        CompositionLocalProvider(io.github.dockside.ui.common.LocalMotion provides io.github.dockside.ui.common.Motion(backdrop = true)) {
+            NowPlayingFull(data.media!!.copy(art = art, title = "Laidback Evening", artist = "Ambient Room")) {}
+        }
+    }
     @Test fun notification() = shot {
         NotificationCard(
             IncomingNotification("k", "pkg", "Messages", null, "Alex", "Are we still on for breakfast tomorrow?", 0, now, null),

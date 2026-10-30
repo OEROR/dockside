@@ -32,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import io.github.dockside.ui.common.digitFloat
+import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.ui.common.springOr
 import androidx.compose.ui.graphics.drawscope.clipRect
 import io.github.dockside.ui.common.softGlow
 import io.github.dockside.ui.common.stagger
@@ -49,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.draw.drawWithCache
@@ -112,6 +115,8 @@ fun RollingText(text: String, style: TextStyle, modifier: Modifier = Modifier, f
     // gently, the colon breathes like a heartbeat, and on arrival the digits rise in one by one.
     val frame = rememberFrameTime()
     val intro = LocalIntro.current
+    val springs = LocalMotion.current.springs
+    val range = LocalMotion.current.floatRange
     Row(modifier) {
         text.forEachIndexed { i, ch ->
             val layer = Modifier.graphicsLayer {
@@ -122,13 +127,13 @@ fun RollingText(text: String, style: TextStyle, modifier: Modifier = Modifier, f
                     // each digit hovers around its own place on its own rhythm; the range is
                     // kept small so digits never reach the date or temperature lines
                     val (fx, fy, fr) = digitFloat(frame.value, i)
-                    translationX = fx * size.width * 0.06f
-                    translationY += fy * size.height * 0.035f
-                    rotationZ = fr * 2f
+                    translationX = fx * size.width * 0.06f * range
+                    translationY += fy * size.height * 0.035f * range
+                    rotationZ = fr * 0.6f * range
                 }
                 if (ch == ':') {
                     val phase = (frame.value % 1000) / 1000f
-                    alpha *= 0.45f + 0.55f * cos(phase * PI.toFloat()).let { it * it }
+                    alpha *= 0.7f + 0.3f * cos(phase * PI.toFloat()).let { it * it }
                 }
             }
             if (ch == ':') {
@@ -140,8 +145,8 @@ fun RollingText(text: String, style: TextStyle, modifier: Modifier = Modifier, f
                 modifier = layer,
                 transitionSpec = {
                     // the new digit springs up from below, the old one flies off the top
-                    (slideInVertically(spring(dampingRatio = 0.62f, stiffness = 260f)) { it * 2 / 3 } +
-                        scaleIn(spring(dampingRatio = 0.55f, stiffness = 260f), initialScale = 0.55f) +
+                    (slideInVertically(springOr(springs, spring(dampingRatio = 0.62f, stiffness = 260f))) { it * 2 / 3 } +
+                        scaleIn(springOr(springs, spring(dampingRatio = 0.55f, stiffness = 260f)), initialScale = 0.55f) +
                         fadeIn(tween(250))) togetherWith
                         (slideOutVertically(tween(380, easing = FastOutSlowInEasing)) { -it * 2 / 3 } +
                             scaleOut(tween(380), targetScale = 1.25f) + fadeOut(tween(300))) using
@@ -201,6 +206,13 @@ fun DigitalClock(color: Color, info: ClockInfo, modifier: Modifier = Modifier) {
 
 // ---------------------------------------------------------------- Analog
 
+/**
+ * How an analog dial is drawn: [CLASSIC] for the full-screen face, [BOLD] for the widget (big
+ * numerals and a ring of marks straight on black), [MINI] for the small world-clock dials
+ * (numerals only, with the city's code inside).
+ */
+enum class Dial { CLASSIC, BOLD, MINI }
+
 @Composable
 fun AnalogClock(
     accent: Color,
@@ -209,12 +221,15 @@ fun AnalogClock(
     showInfo: Boolean = false,
     zone: ZoneId = ZoneId.systemDefault(),
     faceColor: Color = Color(0xFF151517),
-    numerals: Boolean = true,
+    dial: Dial = Dial.CLASSIC,
+    label: String? = null,
 ) {
     val frame = rememberFrameTime()
     val intro = LocalIntro.current
     val day by rememberTicker(60_000)
     val measurer = rememberTextMeasurer(cacheSize = 24)
+    // dark hands on a light (daytime) face
+    val ink = if (faceColor.luminance() > 0.5f) Color.Black else Color.White
     Box(modifier.fillMaxSize()) {
         // The dial (face, marks, numerals, date) is recorded once into its own layer; only the
         // hands below are redrawn every frame.
@@ -230,23 +245,39 @@ fun AnalogClock(
                 val c = Offset(size.width / 2f, size.height / 2f)
                 val ticks = Path()
                 val majors = Path()
-                for (i in 0 until 60) {
+                if (dial != Dial.MINI) for (i in 0 until 60) {
                     val a = i / 60f * 2 * PI.toFloat()
                     val major = i % 5 == 0
-                    val inner = if (major && !numerals) r * 0.82f else r * 0.91f
+                    val inner = when {
+                        dial == Dial.BOLD -> if (major) r * 0.86f else r * 0.89f
+                        else -> r * 0.91f
+                    }
                     val p = if (major) majors else ticks
                     p.moveTo(c.x + polar(a, inner).x, c.y + polar(a, inner).y)
-                    p.lineTo(c.x + polar(a, r * 0.95f).x, c.y + polar(a, r * 0.95f).y)
+                    p.lineTo(c.x + polar(a, r * 0.97f).x, c.y + polar(a, r * 0.97f).y)
                 }
                 val numeralStyle = TextStyle(
-                    color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.SemiBold,
-                    fontSize = (r * 0.17f).toSp(),
+                    color = ink, fontFamily = RoundedFamily,
+                    fontWeight = if (dial == Dial.CLASSIC) FontWeight.SemiBold else FontWeight.ExtraBold,
+                    fontSize = (r * if (dial == Dial.CLASSIC) 0.17f else 0.22f).toSp(),
                 )
-                val numeralLayouts = if (numerals) (1..12).map { n ->
+                val numeralRadius = when (dial) {
+                    Dial.CLASSIC -> 0.74f
+                    Dial.BOLD -> 0.68f
+                    Dial.MINI -> 0.78f
+                }
+                val numeralLayouts = (1..12).map { n ->
                     val layout = measurer.measure(n.toString(), numeralStyle)
-                    val p = c + polar(n / 12f * 2 * PI.toFloat(), r * 0.74f)
+                    val p = c + polar(n / 12f * 2 * PI.toFloat(), r * numeralRadius)
                     layout to Offset(p.x - layout.size.width / 2f, p.y - layout.size.height / 2f)
-                } else emptyList()
+                }
+                val labelLayout = label?.let {
+                    val l = measurer.measure(
+                        it,
+                        TextStyle(color = Color(0xFF9A9AA0), fontFamily = RoundedFamily, fontWeight = FontWeight.ExtraBold, fontSize = (r * 0.17f).toSp()),
+                    )
+                    l to Offset(c.x - l.size.width / 2f, c.y - r * 0.4f - l.size.height / 2f)
+                }
                 val info = if (showInfo) {
                     val small = (r * 0.09f).toSp()
                     val dayL = measurer.measure(
@@ -264,9 +295,14 @@ fun AnalogClock(
                 } else emptyList()
                 onDrawBehind {
                     drawCircle(faceColor, r, c)
-                    drawPath(ticks, Color.White.copy(alpha = 0.35f), style = Stroke(r * 0.008f, cap = StrokeCap.Round))
-                    drawPath(majors, Color.White, style = Stroke(r * 0.018f, cap = StrokeCap.Round))
-                    (numeralLayouts + info).forEach { (layout, at) -> drawText(layout, topLeft = at) }
+                    if (dial == Dial.BOLD) {
+                        drawPath(ticks, Color.White.copy(alpha = 0.4f), style = Stroke(r * 0.018f, cap = StrokeCap.Round))
+                        drawPath(majors, Color.White, style = Stroke(r * 0.026f, cap = StrokeCap.Round))
+                    } else {
+                        drawPath(ticks, Color.White.copy(alpha = 0.35f), style = Stroke(r * 0.008f, cap = StrokeCap.Round))
+                        drawPath(majors, Color.White, style = Stroke(r * 0.018f, cap = StrokeCap.Round))
+                    }
+                    (numeralLayouts + listOfNotNull(labelLayout) + info).forEach { (layout, at) -> drawText(layout, topLeft = at) }
                 }
             }
         )
@@ -280,14 +316,15 @@ fun AnalogClock(
             val sec = t.second + (now % 1000) / 1000f
             val min = t.minute + sec / 60f
             val hour = t.hour % 12 + min / 60f
-            drawHand(hour / 12f * p, r * 0.50f, r * 0.055f, Color.White, c)
-            drawHand(min / 60f * p, r * 0.82f, r * 0.045f, Color.White, c)
-            drawCircle(Color.White, r * 0.05f, c)
+            val bold = dial != Dial.CLASSIC
+            drawHand(hour / 12f * p, r * 0.50f, r * if (bold) 0.075f else 0.055f, ink, c)
+            drawHand(min / 60f * p, r * 0.82f, r * if (bold) 0.06f else 0.045f, ink, c)
+            drawCircle(ink, r * if (bold) 0.07f else 0.05f, c)
             // sweeping second hand
             val sa = sec / 60f * 2 * PI.toFloat() * p
-            drawLine(accent, c - polar(sa, r * 0.16f), c + polar(sa, r * 0.90f), strokeWidth = r * 0.014f, cap = StrokeCap.Round)
-            drawCircle(accent, r * 0.032f, c)
-            drawCircle(faceColor, r * 0.012f, c)
+            drawLine(accent, c - polar(sa, r * 0.16f), c + polar(sa, r * 0.90f), strokeWidth = r * if (bold) 0.02f else 0.014f, cap = StrokeCap.Round)
+            drawCircle(accent, r * if (bold) 0.045f else 0.032f, c)
+            drawCircle(if (faceColor.alpha < 0.5f) Color.Black else faceColor, r * if (bold) 0.018f else 0.012f, c)
         }
     }
 }
@@ -317,7 +354,8 @@ fun FloatClock(colors: Pair<Color, Color>, info: ClockInfo, modifier: Modifier =
         // Fredoka figures are ~0.58 em wide; neighbours overlap by about a sixth of that.
         val sizePx = min(hPx * 0.9f, wPx * 0.94f / (digits.length * 0.49f + 0.3f))
         val overlap = with(LocalDensity.current) { (sizePx * 0.09f).toDp() }
-        fun bob(i: Int) = digitFloat(frame.value, i + 2).second * sizePx * 0.04f
+        val range = LocalMotion.current.floatRange
+        fun bob(i: Int) = digitFloat(frame.value, i + 2).second * sizePx * 0.04f * range
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(-overlap)) {
             digits.forEachIndexed { i, ch ->
                 if (i == digits.length - 2) Colon(sizePx, Modifier.offset { IntOffset(0, bob(9).roundToInt()) })
@@ -362,6 +400,7 @@ private fun BubbleDigit(ch: Char, color: Color, sizePx: Float, modifier: Modifie
     val frame = rememberFrameTime()
     val intro = LocalIntro.current
     val seed = label.last().digitToIntOrNull() ?: 0
+    val range = LocalMotion.current.floatRange
     // each digit swells and sways on its own rhythm, so the numbers feel afloat; on arrival
     // they pop in one after another
     Box(
@@ -371,16 +410,17 @@ private fun BubbleDigit(ch: Char, color: Color, sizePx: Float, modifier: Modifie
             val (fx, _, fr) = digitFloat(frame.value, seed)
             val breath = (1f + 0.03f * sin(frame.value / (2300f + seed * 310f) + seed)) * (0.3f + 0.7f * p)
             scaleX = breath; scaleY = breath
-            translationX = fx * size.width * 0.05f
-            rotationZ = fr * 3.5f + (1f - p) * -25f
+            translationX = fx * size.width * 0.05f * range
+            rotationZ = fr * 3.5f * range + (1f - p) * -25f
         },
         contentAlignment = Alignment.Center,
     ) {
         // Bouncy pop when a digit changes.
+        val springs = LocalMotion.current.springs
         AnimatedContent(
             targetState = ch,
             transitionSpec = {
-                (scaleIn(spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessLow), initialScale = 0.2f) + fadeIn()) togetherWith
+                (scaleIn(springOr(springs, spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessLow)), initialScale = 0.2f) + fadeIn()) togetherWith
                     (scaleOut(tween(220), targetScale = 1.4f) + fadeOut(tween(220))) using SizeTransform(clip = false)
             },
             label = label,
@@ -485,16 +525,20 @@ fun WorldClock(info: ClockInfo, modifier: Modifier = Modifier) {
                 val geo = WorldGeometry(size.width, size.height)
                 val sun = subsolarPoint(minute)
                 val dots = Array(5) { Path() }
-                for (row in 0 until WorldMapData.ROWS) {
-                    val lat = WorldMapData.LAT_TOP - (row + 0.5) * (WorldMapData.LAT_TOP - WorldMapData.LAT_BOTTOM) / WorldMapData.ROWS
-                    for (col in 0 until WorldMapData.COLS) {
-                        if (!WorldMapData.isLand(col, row)) continue
-                        val lon = -180 + (col + 0.5) * 360.0 / WorldMapData.COLS
+                // the mask is sampled in 2×2 blocks: fewer, larger dots read better from a distance
+                val step = 2
+                for (row in 0 until WorldMapData.ROWS step step) {
+                    val lat = WorldMapData.LAT_TOP - (row + step / 2.0) * (WorldMapData.LAT_TOP - WorldMapData.LAT_BOTTOM) / WorldMapData.ROWS
+                    for (col in 0 until WorldMapData.COLS step step) {
+                        var land = 0
+                        for (dr in 0 until step) for (dc in 0 until step) if (WorldMapData.isLand(col + dc, row + dr)) land++
+                        if (land * 2 < step * step) continue
+                        val lon = -180 + (col + step / 2.0) * 360.0 / WorldMapData.COLS
                         // five brightness steps are indistinguishable from a continuous ramp here
                         val band = (sunlight(lat, lon, sun) * 4f).roundToInt()
                         dots[band].addOval(
                             androidx.compose.ui.geometry.Rect(
-                                Offset(geo.left + (col + 0.5f) * geo.cell, geo.top + (row + 0.5f) * geo.cell), geo.cell * 0.36f,
+                                Offset(geo.left + (col + step / 2f) * geo.cell, geo.top + (row + step / 2f) * geo.cell), geo.cell * step * 0.34f,
                             )
                         )
                     }
@@ -576,7 +620,7 @@ fun WorldClock(info: ClockInfo, modifier: Modifier = Modifier) {
             Text(
                 TimeText.time(t, info.h24),
                 style = TextStyle(
-                    color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.SemiBold,
+                    color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.Medium,
                     fontSize = pxToSp(hPx * 0.25f), lineHeight = pxToSp(hPx * 0.26f),
                 ),
             )

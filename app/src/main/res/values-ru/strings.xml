@@ -84,7 +84,6 @@
     <string name="clock_solar">Солнце</string>
     <string name="clock_world">Мир</string>
 
-    <string name="no_events_today">Сегодня больше нет событий</string>
     <string name="no_events">Нет предстоящих событий</string>
     <string name="all_day">Весь день</string>
     <string name="no_alarm">Нет будильника</string>
@@ -137,4 +136,17 @@
     <string name="ignore_posture_desc">Для телефонов со сломанным датчиком положения: включаться всякий раз, когда телефон заряжается и заблокирован, не проверяя, что он лежит боком. Dockside всегда показывается горизонтально.</string>
     <string name="burn_in">Защита от выгорания</string>
     <string name="burn_in_desc">Циферблаты медленно плавают по экрану, а всё остальное смещается на несколько пикселей, чтобы картинка часами не стояла на одном месте</string>
+    <string name="section_motion">Анимации</string>
+    <string name="motion_all">Супер-анимации</string>
+    <string name="motion_all_desc">Плавное живое движение везде. На старых телефонах можно выключить ради батареи</string>
+    <string name="motion_screens">Плавные экраны</string>
+    <string name="motion_screens_desc">Плеер раскрывается из кружка, Dockside плавно появляется и исчезает</string>
+    <string name="motion_pages">Объёмное листание</string>
+    <string name="motion_pages_desc">Виджеты, фото и часы перелистываются, как карточки</string>
+    <string name="motion_backdrop">Живой фон плеера</string>
+    <string name="motion_backdrop_desc">Размытая обложка за плеером медленно плывёт</string>
+    <string name="motion_springs">Пружинистые цифры и виджеты</string>
+    <string name="motion_springs_desc">Цифры и виджеты встают на место с лёгким отскоком</string>
+    <string name="motion_floating">Плавающие цифры</string>
+    <string name="motion_floating_desc">На экране часов цифры постоянно и заметно плавают</string>
 </resources>

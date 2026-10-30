@@ -1,6 +1,8 @@
 package io.github.dockside.ui.widgets
 
 import io.github.dockside.ui.common.easyFling
+import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.ui.common.springOr
 import io.github.dockside.ui.common.lockedVerticalPaging
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
@@ -102,7 +104,7 @@ fun WidgetsView(
     val suggestRight = settings.right.suggestions
     val leftState = rememberStackPager(settings.left, data, !suggestRight)
     val rightState = rememberStackPager(settings.right, data, suggestRight)
-    val scale by animateFloatAsState(if (editing == null) 1f else 0.94f, spring(stiffness = 300f), label = "dim")
+    val scale by animateFloatAsState(if (editing == null) 1f else 0.94f, springOr(LocalMotion.current.springs, spring(stiffness = 300f)), label = "dim")
 
     Box(Modifier.fillMaxSize()) {
         Row(

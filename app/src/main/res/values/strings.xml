@@ -85,7 +85,6 @@
     <string name="clock_solar">Solar</string>
     <string name="clock_world">World</string>
 
-    <string name="no_events_today">No more events today</string>
     <string name="no_events">No upcoming events</string>
     <string name="all_day">All day</string>
     <string name="no_alarm">No alarm</string>
@@ -136,4 +135,17 @@
     <string name="ignore_posture_desc">For phones whose motion sensor doesn’t work: start whenever the phone is charging and locked, without checking that it lies on its side. Dockside always shows in landscape.</string>
     <string name="burn_in">Burn-in protection</string>
     <string name="burn_in_desc">Clock faces drift slowly around the screen and everything else shifts by a few pixels, so no picture stays in one place for hours</string>
+    <string name="section_motion">Animations</string>
+    <string name="motion_all">Super animations</string>
+    <string name="motion_all_desc">Smooth, lively motion everywhere. Turn off to save battery on older phones</string>
+    <string name="motion_screens">Smooth screens</string>
+    <string name="motion_screens_desc">The player grows out of its bubble; Dockside fades in and out</string>
+    <string name="motion_pages">3D page turns</string>
+    <string name="motion_pages_desc">Pages turn like cards when you swipe between widgets, photos and clocks</string>
+    <string name="motion_backdrop">Living player background</string>
+    <string name="motion_backdrop_desc">The blurred album cover behind the player drifts slowly</string>
+    <string name="motion_springs">Springy digits and widgets</string>
+    <string name="motion_springs_desc">Digits and widgets settle with a little bounce</string>
+    <string name="motion_floating">Floating digits</string>
+    <string name="motion_floating_desc">On the clock screen the digits drift about all the time, clearly visible</string>
 </resources>

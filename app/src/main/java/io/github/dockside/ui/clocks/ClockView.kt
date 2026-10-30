@@ -1,6 +1,8 @@
 package io.github.dockside.ui.clocks
 
 import io.github.dockside.ui.common.LocalLive
+import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.ui.common.springOr
 import io.github.dockside.ui.common.easyFling
 import io.github.dockside.ui.common.lockedVerticalPaging
 import androidx.compose.animation.AnimatedVisibility
@@ -89,7 +91,7 @@ fun ClockView(
     }
     LaunchedEffect(editing) { if (!editing) picker = false }
 
-    val scale by animateFloatAsState(if (editing) 0.8f else 1f, spring(dampingRatio = 0.8f, stiffness = 380f), label = "scale")
+    val scale by animateFloatAsState(if (editing) 0.8f else 1f, springOr(LocalMotion.current.springs, spring(dampingRatio = 0.8f, stiffness = 380f)), label = "scale")
     val corner by animateDpAsState(if (editing) 36.dp else 0.dp, label = "corner")
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {

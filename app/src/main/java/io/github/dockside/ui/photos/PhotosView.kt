@@ -2,6 +2,8 @@ package io.github.dockside.ui.photos
 
 import android.net.Uri
 import io.github.dockside.data.BatteryInfo
+import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.ui.common.springOr
 import io.github.dockside.data.PhotoDates
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.produceState
@@ -93,7 +95,7 @@ fun PhotosView(
         delay(1200)
         shown.getOrNull(pager.settledPage)?.let { a -> onUpdate { it.copy(photoAlbum = a.id) } }
     }
-    val scale by animateFloatAsState(if (editing) 0.78f else 1f, spring(dampingRatio = 0.8f, stiffness = 380f), label = "scale")
+    val scale by animateFloatAsState(if (editing) 0.78f else 1f, springOr(LocalMotion.current.springs, spring(dampingRatio = 0.8f, stiffness = 380f)), label = "scale")
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         VerticalPager(
@@ -193,18 +195,18 @@ private fun TimeOverlay(h24: Boolean, battery: BatteryInfo, photo: Uri?) {
         val h = with(LocalDensity.current) { maxHeight.toSp() }
         val hDp = maxHeight
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color(0x44000000), 0.35f to Color.Transparent)))
-        Row(
-            Modifier.align(Alignment.TopEnd).padding(end = 40.dp, top = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.align(Alignment.TopEnd).padding(end = 40.dp, top = 14.dp)) {
             Text(
                 TimeText.time(t, h24),
                 style = TextStyle(
                     color = Color.White.copy(alpha = 0.92f), fontFamily = RoundedFamily, fontWeight = FontWeight.SemiBold,
                     fontSize = h * 0.22f, lineHeight = h * 0.24f, shadow = shadow,
                 ),
+                modifier = Modifier.alignByBaseline(),
             )
-            if (battery.charging) ChargeRing(battery.level, hDp * 0.15f)
+            // the ring stands on the digits' baseline and is as tall as the figures (0.72 em),
+            // so it lines up with them exactly whatever the font metrics around them
+            if (battery.charging) ChargeRing(battery.level, hDp * 0.22f * 0.72f, Modifier.alignBy { it.measuredHeight })
         }
         val dateText = taken?.let { photoDate(it.toLocal()) } ?: TimeText.dateLine(t)
         Text(
@@ -225,8 +227,8 @@ private fun photoDate(t: java.time.LocalDateTime): String =
     ).format(t).replace(".", "")
 
 @Composable
-private fun ChargeRing(level: Int, size: androidx.compose.ui.unit.Dp) {
-    Box(Modifier.padding(start = 14.dp).size(size), contentAlignment = Alignment.Center) {
+private fun ChargeRing(level: Int, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    Box(modifier.padding(start = 16.dp).size(size), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val stroke = this.size.minDimension * 0.09f
             val inset = stroke / 2
@@ -239,8 +241,16 @@ private fun ChargeRing(level: Int, size: androidx.compose.ui.unit.Dp) {
         }
         Text(
             level.toString(),
-            style = TextStyle(color = Palette.Green, fontFamily = RoundedFamily, fontWeight = FontWeight.ExtraBold,
-                fontSize = with(LocalDensity.current) { (size * 0.36f).toSp() }),
+            style = TextStyle(
+                color = Palette.Green, fontFamily = RoundedFamily, fontWeight = FontWeight.ExtraBold,
+                fontSize = with(LocalDensity.current) { (size * 0.36f).toSp() },
+                lineHeight = with(LocalDensity.current) { (size * 0.36f).toSp() },
+                // centre the figures themselves, not the line box with its descender space
+                lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                    androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                    androidx.compose.ui.text.style.LineHeightStyle.Trim.Both,
+                ),
+            ),
         )
     }
 }

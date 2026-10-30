@@ -238,6 +238,35 @@ private fun SettingsScreen() {
             }
         }
         item {
+            Header(R.string.section_motion)
+            Section {
+                val m = s.motion
+                SwitchRow(stringResource(R.string.motion_all), stringResource(R.string.motion_all_desc), m.enabled) { on ->
+                    store.update { it.copy(motion = it.motion.copy(enabled = on)) }
+                }
+                Divider()
+                SwitchRow(stringResource(R.string.motion_screens), stringResource(R.string.motion_screens_desc), m.screens, enabled = m.enabled) { on ->
+                    store.update { it.copy(motion = it.motion.copy(screens = on)) }
+                }
+                Divider()
+                SwitchRow(stringResource(R.string.motion_pages), stringResource(R.string.motion_pages_desc), m.pages, enabled = m.enabled) { on ->
+                    store.update { it.copy(motion = it.motion.copy(pages = on)) }
+                }
+                Divider()
+                SwitchRow(stringResource(R.string.motion_backdrop), stringResource(R.string.motion_backdrop_desc), m.backdrop, enabled = m.enabled) { on ->
+                    store.update { it.copy(motion = it.motion.copy(backdrop = on)) }
+                }
+                Divider()
+                SwitchRow(stringResource(R.string.motion_springs), stringResource(R.string.motion_springs_desc), m.springs, enabled = m.enabled) { on ->
+                    store.update { it.copy(motion = it.motion.copy(springs = on)) }
+                }
+                Divider()
+                SwitchRow(stringResource(R.string.motion_floating), stringResource(R.string.motion_floating_desc), m.floating, enabled = m.enabled) { on ->
+                    store.update { it.copy(motion = it.motion.copy(floating = on)) }
+                }
+            }
+        }
+        item {
             Header(R.string.section_notifications)
             Section {
                 SwitchRow(stringResource(R.string.show_notifications), null, s.showNotifications) { on ->

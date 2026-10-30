@@ -5,14 +5,12 @@ import android.text.format.DateFormat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import io.github.dockside.R
 import io.github.dockside.data.ClockStyle
@@ -24,37 +22,28 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-@OptIn(ExperimentalTextApi::class)
-private fun nunito(weight: Int) = Font(
-    R.font.nunito, FontWeight(weight),
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight))
-)
-
-@OptIn(ExperimentalTextApi::class)
-private fun fredoka(weight: Int) = Font(
-    R.font.fredoka, FontWeight(weight),
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight))
-)
-
-@OptIn(ExperimentalTextApi::class)
-private fun variable(res: Int, weight: Int) = Font(
-    res, FontWeight(weight),
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight))
-)
+// Fonts are static instances cut from the variable originals: some devices drop the weight
+// axis for large glyphs and would draw the big clock digits in the thinnest weight.
 
 /** Tall condensed digits for the Tall clock (OFL "Oswald"). */
-val CondensedFamily = FontFamily((200..700 step 100).map { variable(R.font.oswald, it) })
+val CondensedFamily = FontFamily(Font(R.font.oswald_400, FontWeight.Normal), Font(R.font.oswald_500, FontWeight.Medium))
 
-/** Wide geometric numerals for the Lines and Gradient clocks (OFL "Unbounded"). */
-val WideFamily = FontFamily((200..900 step 100).map { variable(R.font.unbounded, it) })
+/** Wide geometric numerals for the Lines and Gradient clocks (OFL "Unbounded", Latin only). */
+val WideFamily = FontFamily(Font(R.font.unbounded_400, FontWeight.Normal), Font(R.font.unbounded_500, FontWeight.Medium))
 
 /** Rounded sans used for most Dockside typography (OFL "Nunito"). */
 val RoundedFamily = FontFamily(
-    nunito(300), nunito(400), nunito(500), nunito(600), nunito(700), nunito(800), nunito(900)
+    Font(R.font.nunito_300, FontWeight.Light),
+    Font(R.font.nunito_400, FontWeight.Normal),
+    Font(R.font.nunito_500, FontWeight.Medium),
+    Font(R.font.nunito_600, FontWeight.SemiBold),
+    Font(R.font.nunito_700, FontWeight.Bold),
+    Font(R.font.nunito_800, FontWeight.ExtraBold),
+    Font(R.font.nunito_900, FontWeight.Black),
 )
 
 /** Bubbly display face used by the Float clock (OFL "Fredoka"). */
-val BubbleFamily = FontFamily(fredoka(400), fredoka(500), fredoka(600), fredoka(700))
+val BubbleFamily = FontFamily(Font(R.font.fredoka_600, FontWeight.SemiBold), Font(R.font.fredoka_700, FontWeight.Bold))
 
 object Palette {
     val Red = Color(0xFFFF4539)
@@ -144,12 +133,35 @@ fun rememberTicker(everyMs: Long = 1000L): State<Long> = produceState(System.cur
  */
 val LocalLive = compositionLocalOf { true }
 
+/** Which "super animations" are on, after the master switch. Off everywhere by default (tests). */
+data class Motion(
+    val screens: Boolean = false,
+    val pages: Boolean = false,
+    val backdrop: Boolean = false,
+    val springs: Boolean = false,
+    val floating: Boolean = false,
+) {
+    /** How far clock digits drift: the usual barely-there hover, or clearly afloat. */
+    val floatRange get() = if (floating) 2.6f else 1f
+
+    companion object {
+        fun of(p: io.github.dockside.data.MotionPrefs) =
+            if (!p.enabled) Motion() else Motion(p.screens, p.pages, p.backdrop, p.springs, p.floating)
+    }
+}
+
+val LocalMotion = compositionLocalOf { Motion() }
+
+/** [bouncy] when springy animations are on, otherwise a plain ease of about the same length. */
+fun <T> springOr(springs: Boolean, bouncy: androidx.compose.animation.core.FiniteAnimationSpec<T>): androidx.compose.animation.core.FiniteAnimationSpec<T> =
+    if (springs) bouncy else androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+
 /**
  * How far a clock face has "assembled" itself, 0..1. It runs from 0 to 1 when the face comes
  * into view (hands sweep in from 12, digits rise into place) and back when it leaves.
  * Faces read it inside layer/draw blocks only, so the animation costs no recomposition.
  */
-val LocalIntro = compositionLocalOf<State<Float>> { mutableStateOf(1f) }
+val LocalIntro = compositionLocalOf<State<Float>> { mutableFloatStateOf(1f) }
 
 /**
  * A never-repeating-looking position inside ±[ax], ±[ay] (pixels) for burn-in protection:
@@ -220,6 +232,9 @@ object TimeText {
 
     fun weekdayLong(t: LocalDateTime): String =
         t.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+
+    fun monthShort(t: LocalDateTime): String =
+        t.month.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault())
 
     fun monthLong(t: LocalDateTime): String =
         t.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault())

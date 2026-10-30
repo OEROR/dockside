@@ -25,8 +25,8 @@ android {
         minSdk = 27
         targetSdk = 35
         // Bump both for every release: versionCode is the build number shown in Settings.
-        versionCode = 10
-        versionName = "1.8.0"
+        versionCode = 11
+        versionName = "1.9.0"
         buildConfigField(
             "String", "BUILD_DATE",
             "\"" + LocalDate.now(ZoneOffset.UTC).toString() + "\"",

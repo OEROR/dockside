@@ -54,6 +54,15 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedContent
 import kotlin.math.sin
 import kotlin.math.PI
+import kotlin.math.cos
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.derivedStateOf
+import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.blur
+import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.ui.common.Motion
 import io.github.dockside.ui.common.rememberTicker
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
@@ -104,11 +113,16 @@ import io.github.dockside.ui.common.Palette
 import io.github.dockside.ui.common.RoundedFamily
 import io.github.dockside.ui.common.toLocal
 import io.github.dockside.ui.photos.PhotosView
-import io.github.dockside.ui.widgets.MediaControls
+import io.github.dockside.ui.widgets.CircleButton
 import io.github.dockside.ui.widgets.SeekBar
 import io.github.dockside.ui.widgets.StackSide
 import io.github.dockside.ui.widgets.WidgetsView
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import kotlin.math.abs
 
 /** What the hosting Activity or DreamService provides to the Dockside UI. */
@@ -141,6 +155,18 @@ fun StandbyRoot(host: StandbyHost) {
     val settings by store.settings.collectAsState()
     val data = rememberStandbyData(settings)
     val update: ((AppSettings) -> AppSettings) -> Unit = { store.update(it) }
+    val motion = Motion.of(settings.motion)
+    val scope = rememberCoroutineScope()
+
+    // --- arriving and leaving: Dockside fades and settles in rather than cutting in
+    val appear = remember { Animatable(if (motion.screens) 0f else 1f) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, tween(650, easing = FastOutSlowInEasing)) }
+    val leave: () -> Unit = {
+        scope.launch {
+            if (motion.screens) appear.animateTo(0f, tween(420, easing = FastOutSlowInEasing))
+            host.exit(false)
+        }
+    }
 
     // --- views, remembered per charger (location memory by plug type)
     val plug = data.battery.plugType ?: "none"
@@ -223,12 +249,12 @@ fun StandbyRoot(host: StandbyHost) {
     // --- exit conditions: unplugged or turned upright
     LaunchedEffect(data.battery.charging) {
         if (!data.battery.charging && host.exitOnUndock) {
-            delay(1500); host.exit(false)
+            delay(1500); leave()
         }
     }
     LaunchedEffect(portraitSince != 0L) {
         if (portraitSince != 0L && host.exitWhenUpright && !settings.ignorePosture) {
-            delay(1200); host.exit(false)
+            delay(1200); leave()
         }
     }
 
@@ -253,6 +279,20 @@ fun StandbyRoot(host: StandbyHost) {
     // the next track no longer pops the full player back up.
     var dismissedApp by remember { mutableStateOf<String?>(null) }
     val media = data.media
+    // the last track stays on the player while it shrinks back into the bubble
+    var playerMedia by remember { mutableStateOf(media) }
+    LaunchedEffect(media) { if (media != null) playerMedia = media }
+    // 0 = the bubble, 1 = the full player; it grows out of the bubble and shrinks back into it
+    val expand = remember { Animatable(0f) }
+    LaunchedEffect(showPlayer, motion.screens) {
+        val target = if (showPlayer) 1f else 0f
+        when {
+            !motion.screens -> expand.snapTo(target)
+            showPlayer -> expand.animateTo(target, spring(dampingRatio = 0.78f, stiffness = 140f))
+            else -> expand.animateTo(target, spring(dampingRatio = 1f, stiffness = 220f))
+        }
+    }
+    val playerOnScreen by remember { derivedStateOf { expand.value > 0f } }
     LaunchedEffect(media?.playing, media?.title) {
         when {
             media == null -> {
@@ -268,8 +308,14 @@ fun StandbyRoot(host: StandbyHost) {
     NightFilter(nightFraction)
     val sleepAlpha by animateFloatAsState(if (sleeping) 1f else 0f, tween(if (sleeping) 1200 else 350), label = "sleep")
 
+    CompositionLocalProvider(LocalMotion provides motion) {
     ForceLandscape(clockwise = rightEdgeUp) { Box(
         Modifier.fillMaxSize().background(Color.Black)
+            .graphicsLayer {
+                val a = appear.value
+                alpha = a
+                scaleX = 0.94f + 0.06f * a; scaleY = scaleX
+            }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -290,7 +336,22 @@ fun StandbyRoot(host: StandbyHost) {
             val shiftClock = rememberTicker(3 * 60_000)
             CompositionLocalProvider(LocalLive provides live) {
                 Box(
-                    Modifier.fillMaxSize().clipToBounds().graphicsLayer {
+                    Modifier.fillMaxSize()
+                        .graphicsLayer {
+                            // while swiping, pages turn and shrink a little like cards
+                            if (!motion.pages) return@graphicsLayer
+                            val off = ((pager.currentPage - page) + pager.currentPageOffsetFraction).coerceIn(-1f, 1f)
+                            val a = abs(off)
+                            if (a == 0f) return@graphicsLayer
+                            val s = 1f - 0.16f * sin(a * PI.toFloat() / 2)
+                            scaleX = s; scaleY = s
+                            rotationY = off * 32f
+                            cameraDistance = 14f * density
+                            alpha = 1f - 0.5f * a
+                            shape = RoundedCornerShape(36.dp.toPx() * (a * 5f).coerceAtMost(1f))
+                            clip = true
+                        }
+                        .clipToBounds().graphicsLayer {
                         // burn-in protection: everything moves by 2-3 px every few minutes,
                         // too little and too seldom to notice
                         if (settings.burnInGuard && !editing) {
@@ -322,7 +383,7 @@ fun StandbyRoot(host: StandbyHost) {
 
         // After the player is closed, a small circle at the top keeps the music one tap away.
         AnimatedVisibility(
-            visible = media != null && !showPlayer && !editing,
+            visible = media != null && (!showPlayer || motion.screens) && !editing,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp),
             enter = scaleIn(spring(dampingRatio = 0.6f, stiffness = 500f), initialScale = 0.3f) + fadeIn(),
             exit = scaleOut(targetScale = 0.3f) + fadeOut(),
@@ -334,9 +395,40 @@ fun StandbyRoot(host: StandbyHost) {
             }
         }
 
-        AnimatedVisibility(showPlayer && media != null, enter = fadeIn() + scaleIn(initialScale = 0.92f), exit = fadeOut() + scaleOut(targetScale = 0.92f)) {
-            if (media != null) NowPlayingFull(media) {
-                showPlayer = false; dismissedApp = media.packageName
+        if (playerOnScreen) playerMedia?.let { m ->
+            Box(
+                Modifier.fillMaxSize().graphicsLayer {
+                    // the player's outline grows from the bubble (46 dp circle, centred 32 dp
+                    // below the top) to the whole screen
+                    val p = expand.value.coerceIn(0f, 1f)
+                    val r = 23.dp.toPx()
+                    val cy = 32.dp.toPx()
+                    val left = lerp(size.width / 2 - r, 0f, p)
+                    val top = lerp(cy - r, 0f, p)
+                    val right = lerp(size.width / 2 + r, size.width, p)
+                    val bottom = lerp(cy + r, size.height, p)
+                    shape = object : androidx.compose.ui.graphics.Shape {
+                        override fun createOutline(size: Size, layoutDirection: androidx.compose.ui.unit.LayoutDirection, density: androidx.compose.ui.unit.Density) =
+                            androidx.compose.ui.graphics.Outline.Rounded(
+                                androidx.compose.ui.geometry.RoundRect(left, top, right, bottom, androidx.compose.ui.geometry.CornerRadius(lerp(r, 0f, p)))
+                            )
+                    }
+                    clip = true
+                }
+            ) {
+                Box(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        val p = expand.value
+                        alpha = ((p - 0.12f) / 0.5f).coerceIn(0f, 1f)
+                        // the springy overshoot shows here, as a slight swell of the content
+                        scaleX = 0.88f + 0.12f * p; scaleY = scaleX
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                    }
+                ) {
+                    NowPlayingFull(m) {
+                        showPlayer = false; dismissedApp = m.packageName
+                    }
+                }
             }
         }
 
@@ -365,7 +457,10 @@ fun StandbyRoot(host: StandbyHost) {
             )
         }
     } }
+    }
 }
+
+private fun lerp(a: Float, b: Float, f: Float) = a + (b - a) * f
 
 /**
  * Lays [content] out in landscape even when the window is portrait (the screen saver runs in
@@ -485,44 +580,78 @@ internal fun NowPlayingFull(m: MediaInfo, onDismiss: () -> Unit) {
     // blur effect would be re-rendered on every animation frame.
     val track = Track(m.title, m.artist, m.art)
     BoxWithConstraints(
-        Modifier.fillMaxSize().background(Color.Black)
+        Modifier.fillMaxSize().background(Color(0xFF1C1C1E))
             .pointerInput(Unit) {
                 var total = 0f
                 detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { if (total > 120f) onDismiss() }) { _, d -> total += d }
             }
     ) {
         val h = maxHeight
-        Crossfade(track, animationSpec = tween(700), label = "backdrop") { t ->
+        val drifting = LocalMotion.current.backdrop
+        val drift = rememberInfiniteTransition(label = "drift")
+        val phase by drift.animateFloat(0f, 2 * PI.toFloat(), infiniteRepeatable(tween(48_000, easing = LinearEasing)), label = "phase")
+        Crossfade(track, animationSpec = tween(900), label = "backdrop") { t ->
             val glow = remember(t.art) {
-                t.art?.let { runCatching { android.graphics.Bitmap.createScaledBitmap(it, 12, 12, true).asImageBitmap() }.getOrNull() }
+                t.art?.let { runCatching { android.graphics.Bitmap.createScaledBitmap(it, 24, 24, true).asImageBitmap() }.getOrNull() }
             }
             if (glow != null) {
+                // The cover, stretched over the whole screen and heavily blurred. The blur is
+                // rendered once into its layer; the slow drift only moves that layer around.
                 Image(
                     glow, null, contentScale = ContentScale.Crop, filterQuality = FilterQuality.High,
-                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.55f },
+                    modifier = Modifier.fillMaxSize()
+                        .graphicsLayer {
+                            alpha = 0.95f
+                            if (drifting) {
+                                val s = 1.45f + 0.12f * sin(phase * 2)
+                                scaleX = s; scaleY = s
+                                translationX = size.width * 0.08f * sin(phase)
+                                translationY = size.height * 0.08f * cos(phase * 3)
+                                rotationZ = 6f * sin(phase * 2 + 1f)
+                            } else {
+                                scaleX = 1.3f; scaleY = 1.3f
+                            }
+                        }
+                        .blur(36.dp),
                 )
             }
         }
-        Box(Modifier.fillMaxSize().background(Color(0x66000000)))
-        Row(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 28.dp), verticalAlignment = Alignment.CenterVertically) {
-            // New track: the cover and titles cross-fade with a small slide instead of jumping.
-            AnimatedContent(
-                targetState = track,
-                transitionSpec = {
-                    (fadeIn(tween(450)) + scaleIn(tween(450), initialScale = 0.94f)) togetherWith
-                        (fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 1.04f))
-                },
-                label = "cover",
-            ) { t ->
-                val art = remember(t.art) { t.art?.asImageBitmap() }
-                Box(Modifier.size(h * 0.66f).clip(RoundedCornerShape(26.dp)).background(Palette.CardHigh), contentAlignment = Alignment.Center) {
-                    if (art != null) Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    else Icon(Glyphs.Music, null, tint = Palette.Pink, modifier = Modifier.size(h * 0.2f))
+        Box(Modifier.fillMaxSize().background(Color(0x8F000000)))
+        Row(Modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            // the cover stands large while playing and settles back a little on pause
+            val coverScale by animateFloatAsState(if (m.playing) 1f else 0.8f, spring(dampingRatio = 0.75f, stiffness = 260f), label = "cover")
+            Box(Modifier.size(h * 0.78f), contentAlignment = Alignment.Center) {
+                AnimatedContent(
+                    targetState = track,
+                    transitionSpec = {
+                        (fadeIn(tween(450)) + scaleIn(tween(450), initialScale = 0.94f)) togetherWith
+                            (fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 1.04f))
+                    },
+                    modifier = Modifier.graphicsLayer { scaleX = coverScale; scaleY = coverScale },
+                    label = "cover",
+                ) { t ->
+                    val art = remember(t.art) { t.art?.asImageBitmap() }
+                    val shape = RoundedCornerShape(h * 0.03f)
+                    Box(
+                        Modifier.size(h * 0.78f).shadow(24.dp, shape).clip(shape).background(Palette.CardHigh),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (art != null) Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        else Icon(Glyphs.Music, null, tint = Palette.Pink, modifier = Modifier.size(h * 0.22f))
+                    }
                 }
             }
-            Spacer(Modifier.width(40.dp))
-            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
-                Text(m.appName.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.6f), fontFamily = RoundedFamily, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp))
+            Spacer(Modifier.width(44.dp))
+            Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    VolumeBar(Modifier.weight(1f))
+                    Spacer(Modifier.width(14.dp))
+                    Box(
+                        Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)).clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Glyphs.Close, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp)) }
+                }
+                Spacer(Modifier.weight(1f))
                 AnimatedContent(
                     targetState = track,
                     transitionSpec = {
@@ -531,22 +660,70 @@ internal fun NowPlayingFull(m: MediaInfo, onDismiss: () -> Unit) {
                     },
                     label = "titles",
                 ) { t ->
-                    Column {
-                        Text(t.title, style = TextStyle(color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.Black, fontSize = 36.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(t.artist, style = TextStyle(color = Color.White.copy(alpha = 0.7f), fontFamily = RoundedFamily, fontWeight = FontWeight.Bold, fontSize = 26.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            t.title, style = TextStyle(color = Color.White, fontFamily = RoundedFamily, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            t.artist, style = TextStyle(color = Color.White.copy(alpha = 0.45f), fontFamily = RoundedFamily, fontWeight = FontWeight.Bold, fontSize = 22.sp),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
-                Spacer(Modifier.height(22.dp))
-                if (m.durationMs > 0) SeekBar(m, 7.dp)
-                Spacer(Modifier.height(18.dp))
-                MediaControls(m.playing, 56.dp)
+                Spacer(Modifier.weight(0.6f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    val dim = Color.White.copy(alpha = 0.4f)
+                    CircleButton(Glyphs.Previous, h * 0.22f, tint = dim) { LiveEvents.previous() }
+                    CircleButton(if (m.playing) Glyphs.Pause else Glyphs.Play, h * 0.26f) { LiveEvents.playPause() }
+                    CircleButton(Glyphs.Next, h * 0.22f, tint = dim) { LiveEvents.next() }
+                }
+                Spacer(Modifier.weight(0.6f))
+                if (m.durationMs > 0) SeekBar(m, 11.dp, fill = Color.White.copy(alpha = 0.6f))
             }
         }
+    }
+}
+
+/** Media volume as a wide pill; drag or tap to change it. */
+@Composable
+private fun VolumeBar(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val audio = remember { context.getSystemService(android.media.AudioManager::class.java) }
+    val stream = android.media.AudioManager.STREAM_MUSIC
+    val max = remember { audio?.getStreamMaxVolume(stream)?.coerceAtLeast(1) ?: 1 }
+    var level by remember { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    // follows the hardware buttons too
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (!dragging) level = (audio?.getStreamVolume(stream) ?: 0) / max.toFloat()
+            delay(400)
+        }
+    }
+    fun set(f: Float) {
+        level = f.coerceIn(0f, 1f)
+        runCatching { audio?.setStreamVolume(stream, (level * max).roundToInt(), 0) }
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.align(Alignment.TopEnd).padding(16.dp).size(44.dp).clip(CircleShape).background(Color(0x55FFFFFF))
-                .clickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Glyphs.Close, null, tint = Color.White, modifier = Modifier.size(22.dp)) }
+            Modifier.weight(1f).height(36.dp)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragging = true; set(it.x / size.width) },
+                        onDragEnd = { dragging = false },
+                        onDragCancel = { dragging = false },
+                    ) { change, _ -> change.consume(); set(change.position.x / size.width) }
+                }
+                .pointerInput(Unit) { detectTapGestures { set(it.x / size.width) } },
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Box(Modifier.fillMaxWidth().height(13.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f))) {
+                Box(Modifier.fillMaxWidth(level).fillMaxHeight().background(Color.White.copy(alpha = 0.85f)))
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Icon(Glyphs.Speaker, null, tint = Color.White.copy(alpha = 0.45f), modifier = Modifier.size(26.dp))
     }
 }
 

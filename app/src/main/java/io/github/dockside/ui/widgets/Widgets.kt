@@ -59,6 +59,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +82,7 @@ import io.github.dockside.service.LiveEvents
 import io.github.dockside.standby.StandbyData
 import io.github.dockside.ui.clocks.AnalogClock
 import io.github.dockside.ui.clocks.ClockInfo
+import io.github.dockside.ui.clocks.Dial
 import io.github.dockside.ui.clocks.RollingText
 import io.github.dockside.ui.clocks.WorldCities
 import io.github.dockside.ui.common.Glyphs
@@ -162,7 +166,7 @@ fun WidgetContent(kind: WidgetKind, data: StandbyData, settings: AppSettings, mo
         when (kind) {
             WidgetKind.ANALOG_CLOCK -> AnalogClock(
                 Palette.Orange, ClockInfo(data.h24), Modifier.fillMaxSize().padding(6.dp),
-                showInfo = true, faceColor = Palette.Card,
+                faceColor = Color.Transparent, dial = Dial.BOLD,
             )
             WidgetKind.DIGITAL_CLOCK -> DigitalClockWidget(data)
             WidgetKind.WORLD_CLOCK -> WorldClockWidget(settings, data)
@@ -225,26 +229,20 @@ private fun DigitalClockWidget(data: StandbyData) {
 private fun WorldClockWidget(settings: AppSettings, data: StandbyData) {
     val cities = settings.worldCities.mapNotNull { WorldCities.byZone(it) }.take(4)
     val now by rememberTicker(60_000)
-    BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp)) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(4.dp)) {
         val m = metrics()
-        val cell = m.dp(0.5f)
+        val dial = m.dp(0.47f)
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
             cities.chunked(2).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     row.forEach { city ->
                         val zone = ZoneId.of(city.zone)
-                        val local = now.toLocal(zone)
-                        val day = local.hour in 6..17
-                        val offset = (zone.rules.getOffset(java.time.Instant.ofEpochMilli(now)).totalSeconds -
-                            ZoneId.systemDefault().rules.getOffset(java.time.Instant.ofEpochMilli(now)).totalSeconds) / 3600
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnalogClock(
-                                Palette.Orange, ClockInfo(data.h24), Modifier.size(cell * 0.66f), zone = zone,
-                                faceColor = if (day) Color(0xFFE9E9EE) else Palette.CardHigh, numerals = false,
-                            )
-                            Text(city.name, style = style(m.unit(0.055f)), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(stringResource(R.string.hours_offset, offset), style = style(m.unit(0.045f), Palette.Gray))
-                        }
+                        val day = now.toLocal(zone).hour in 6..17
+                        AnalogClock(
+                            Palette.Orange, ClockInfo(data.h24), Modifier.size(dial), zone = zone,
+                            faceColor = if (day) Color.White else Color(0xFF333336), dial = Dial.MINI,
+                            label = cityCode(city.name),
+                        )
                     }
                 }
             }
@@ -260,23 +258,30 @@ private fun CalendarDayWidget(data: StandbyData) {
     val t = now.toLocal()
     BoxWithConstraints(Modifier.fillMaxSize().padding(10.dp)) {
         val m = metrics()
-        Column(Modifier.fillMaxSize()) {
-            Text(TimeText.weekdayLong(t).uppercase(), style = style(m.unit(0.1f), Palette.Red, FontWeight.ExtraBold))
-            // the big date takes whatever height is left, so the event line always fits
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+        val event = data.events.firstOrNull { it.end > now && it.begin < now + 24 * 3600_000L }
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            // "Fri Oct." with the weekday in red, then the date as large as the space allows
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = Palette.Red)) { append(TimeText.weekdayShort(t).capitalized()) }
+                    append(" ")
+                    append(TimeText.monthShort(t).capitalized())
+                },
+                style = style(m.unit(0.15f), Palette.Gray, FontWeight.Bold), maxLines = 1,
+            )
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val big = if (event == null) 0.62f else 0.46f
                 Text(
                     t.dayOfMonth.toString(),
-                    style = style(m.unit(0.46f), weight = FontWeight.Black).copy(
-                        lineHeight = m.unit(0.46f),
+                    style = style(m.unit(big), weight = FontWeight.SemiBold).copy(
+                        lineHeight = m.unit(big),
                         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
                     ),
                 )
             }
-            val event = data.events.firstOrNull { it.end > now && it.begin < now + 24 * 3600_000L }
             when {
+                event != null -> Box(Modifier.fillMaxWidth()) { EventRow(event, m.unit(0.085f), m.unit(0.07f)) }
                 !data.calendarAllowed -> Text(stringResource(R.string.needs_calendar), style = style(m.unit(0.065f), Palette.Gray))
-                event == null -> Text(stringResource(R.string.no_events_today), style = style(m.unit(0.075f), Palette.Gray))
-                else -> EventRow(event, m.unit(0.085f), m.unit(0.07f))
             }
         }
     }
@@ -754,7 +759,7 @@ private fun PillButton(text: String, bg: Color, fg: Color, size: Dp, onClick: ()
  * thickens and follows the finger; the jump is sent when it's released.
  */
 @Composable
-fun SeekBar(m: io.github.dockside.service.MediaInfo, thickness: Dp, showTimes: Boolean = true) {
+fun SeekBar(m: io.github.dockside.service.MediaInfo, thickness: Dp, showTimes: Boolean = true, fill: Color = Color.White) {
     val tick by rememberTicker(250)
     var dragFraction by remember { mutableStateOf<Float?>(null) }
     // After a seek, hold the bar where the finger left it until the player reports the new
@@ -796,7 +801,7 @@ fun SeekBar(m: io.github.dockside.service.MediaInfo, thickness: Dp, showTimes: B
             contentAlignment = Alignment.CenterStart,
         ) {
             Box(Modifier.fillMaxWidth().height(thickness * grow).clip(CircleShape).background(Color.White.copy(alpha = 0.25f))) {
-                Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(Color.White))
+                Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(fill))
             }
         }
         if (showTimes) {
@@ -805,7 +810,7 @@ fun SeekBar(m: io.github.dockside.service.MediaInfo, thickness: Dp, showTimes: B
                 val small = TextStyle(color = Color.White.copy(alpha = 0.6f), fontFamily = RoundedFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text(formatTrackTime(pos), style = small)
                 Spacer(Modifier.weight(1f))
-                Text("-" + formatTrackTime(m.durationMs - pos), style = small)
+                Text("−" + formatTrackTime(m.durationMs - pos), style = small)
             }
         }
     }
@@ -815,3 +820,5 @@ fun formatTrackTime(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
+
+private fun String.capitalized() = replaceFirstChar { it.titlecase(Locale.getDefault()) }

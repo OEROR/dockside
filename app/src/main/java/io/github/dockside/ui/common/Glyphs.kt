@@ -53,18 +53,30 @@ object Glyphs {
         moveTo(18f, 14f); curveTo(18.4f, 16.4f, 18.9f, 17f, 21f, 17.5f); curveTo(18.9f, 18f, 18.4f, 18.6f, 18f, 21f)
         curveTo(17.6f, 18.6f, 17.1f, 18f, 15f, 17.5f); curveTo(17.1f, 17f, 17.6f, 16.4f, 18f, 14f); close()
     }
-    val Play = fill("play") { moveTo(7f, 4.5f); lineTo(19.5f, 12f); lineTo(7f, 19.5f); close() }
-    val Pause = fill("pause") {
-        moveTo(6f, 4.5f); lineTo(10f, 4.5f); lineTo(10f, 19.5f); lineTo(6f, 19.5f); close()
-        moveTo(14f, 4.5f); lineTo(18f, 4.5f); lineTo(18f, 19.5f); lineTo(14f, 19.5f); close()
+    /** Filled, with the corners softened by a round-joined outline of the same colour. */
+    private fun soft(name: String, block: PathBuilder.() -> Unit) =
+        ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
+            path(
+                fill = SolidColor(Color.White), stroke = SolidColor(Color.White), strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, pathBuilder = block,
+            )
+        }.build()
+
+    val Play = soft("play") { moveTo(7.5f, 5f); lineTo(19f, 12f); lineTo(7.5f, 19f); close() }
+    val Pause = soft("pause") {
+        moveTo(6.5f, 5f); lineTo(9.5f, 5f); lineTo(9.5f, 19f); lineTo(6.5f, 19f); close()
+        moveTo(14.5f, 5f); lineTo(17.5f, 5f); lineTo(17.5f, 19f); lineTo(14.5f, 19f); close()
     }
-    val Next = fill("next") {
-        moveTo(2.5f, 6f); lineTo(11f, 12f); lineTo(2.5f, 18f); close()
-        moveTo(11.5f, 6f); lineTo(20f, 12f); lineTo(11.5f, 18f); close()
+    val Next = soft("next") {
+        moveTo(3f, 6.5f); lineTo(11f, 12f); lineTo(3f, 17.5f); close()
+        moveTo(12f, 6.5f); lineTo(20f, 12f); lineTo(12f, 17.5f); close()
     }
-    val Previous = fill("previous") {
-        moveTo(21.5f, 6f); lineTo(13f, 12f); lineTo(21.5f, 18f); close()
-        moveTo(12.5f, 6f); lineTo(4f, 12f); lineTo(12.5f, 18f); close()
+    val Previous = soft("previous") {
+        moveTo(21f, 6.5f); lineTo(13f, 12f); lineTo(21f, 17.5f); close()
+        moveTo(12f, 6.5f); lineTo(4f, 12f); lineTo(12f, 17.5f); close()
+    }
+    val Speaker = soft("speaker") {
+        moveTo(3.5f, 9.5f); lineTo(7f, 9.5f); lineTo(11.5f, 5.5f); lineTo(11.5f, 18.5f); lineTo(7f, 14.5f); lineTo(3.5f, 14.5f); close()
     }
     val Bolt = fill("bolt") {
         moveTo(13.5f, 2f); lineTo(5f, 13.5f); lineTo(11f, 13.5f); lineTo(10f, 22f); lineTo(19f, 10f)
