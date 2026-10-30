@@ -168,4 +168,6 @@
     <string name="summary_no_weather">Погода ещё загружается</string>
     <string name="summary_battery">Телефон</string>
     <string name="summary_next_alarm">Следующий будильник</string>
+    <string name="showcase">Режим съёмки</string>
+    <string name="showcase_desc">Dockside сам показывает циферблаты, листание, плеер и будильник, чтобы можно было снять видео. Выход — кнопка «Назад».</string>
 </resources>

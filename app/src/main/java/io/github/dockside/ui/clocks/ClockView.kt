@@ -42,6 +42,7 @@ import kotlin.math.sin
 import kotlinx.coroutines.delay
 import io.github.dockside.ui.common.LocalIntro
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.draw.clipToBounds
@@ -84,6 +85,11 @@ fun ClockView(
     val styles = ClockStyle.entries
     val pager = rememberPagerState(initialPage = settings.clockStyle.ordinal) { styles.size }
     var picker by remember { mutableStateOf(false) }
+    // filming mode turns the faces by itself
+    val showcaseStyle by io.github.dockside.standby.Showcase.clockStyle.collectAsState()
+    LaunchedEffect(showcaseStyle) {
+        showcaseStyle?.let { pager.animateScrollToPage(it.ordinal, animationSpec = tween(900, easing = FastOutSlowInEasing)) }
+    }
     LaunchedEffect(pager.settledPage) {
         // save after the motion has finished, so the re-render doesn't land mid-animation
         delay(1200)

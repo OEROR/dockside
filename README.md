@@ -5,6 +5,12 @@
 Dockside is an independent, open-source bedside mode for Android, inspired by the nightstand modes of modern phones. All of its code, icons and clock designs were made for this project, and it uses only open-licensed fonts.
 
 <p align="center">
+  <img src="docs/demo.gif" width="100%" alt="Clock faces, widgets, the player, the alarm screen and the day summary">
+</p>
+
+<p align="center"><b><a href="../../releases/latest">⬇ Download the APK</a></b> · Android 7.0+ · free, no ads, no tracking</p>
+
+<p align="center">
   <img src="docs/screenshots/widgets.png" width="49%" alt="Two widget stacks: analog clock and weather">
   <img src="docs/screenshots/clock-digital.png" width="49%" alt="Digital clock">
 </p>
@@ -26,6 +32,7 @@ Dockside is an independent, open-source bedside mode for Android, inspired by th
 | **Full-screen notifications** | New notifications appear as large cards. The **Show Preview on Tap Only** setting hides their content until tapped. |
 | **Now Playing** | When playback starts, a full-screen player grows out of the bubble at the top: large artwork over a blurred, slowly drifting copy of the cover, a volume slider, progress and controls. Drag or tap the progress bar to jump within the track (also in the Now Playing widget). Close the player and the music shrinks into a small dark circle at the top of the screen whose bars move with the music's loudness, in a colour taken from the cover; tap it to bring the player back. |
 | **Alarm screen** | When the Clock app's alarm or timer rings while Dockside is up, Dockside shows it its own way: a sky for the time of day (sunrise, daylight, sunset or stars), a greeting, the time and two buttons. **Close** presses the Clock app's own dismiss button; **More** dismisses and opens a summary of the day (weather with the next hours, today's events, the phone's charge and the next alarm). Snooze appears when the alarm offers it. Needs notification access and *Display over other apps*; *Try the alarm screen* in Settings shows it at any time. |
+| **Filming mode** | *Settings → Filming mode* plays through clock faces, page turns, the player and the alarm by itself, with sample weather and events where your own are missing, so a demo video can be recorded hands-free. Press Back to leave. |
 | **Super animations** | On by default, each effect with its own switch: the player opens from and closes into its bubble, Dockside fades in and out, pages turn like cards while swiping, the player background drifts, digits and widgets settle with a little bounce. *Floating digits* (off by default) makes the clock digits drift about all the time, clearly visible. |
 | **Per-charger memory** | The last view is remembered per charger type (AC, USB, wireless, dock). |
 | **Screen saver** | Dockside is also an Android **screen saver (Daydream)**, so the system can start it by itself while charging or docked. |

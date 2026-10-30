@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.OutlinedButton
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -170,6 +171,18 @@ private fun SettingsScreen() {
                     },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) { Text(stringResource(R.string.preview), fontWeight = FontWeight.Bold) }
+                OutlinedButton(
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, StandbyActivity::class.java)
+                                .putExtra(StandbyActivity.EXTRA_PREVIEW, true)
+                                .putExtra(StandbyActivity.EXTRA_SHOWCASE, true)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                ) { Text(stringResource(R.string.showcase), fontWeight = FontWeight.Bold) }
+                Text(stringResource(R.string.showcase_desc), color = Palette.Gray, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
         }
         item {

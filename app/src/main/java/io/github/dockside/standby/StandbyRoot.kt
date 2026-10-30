@@ -147,6 +147,9 @@ interface StandbyHost {
     fun open(intent: Intent)
     fun open(pendingIntent: PendingIntent)
     fun exit(userInitiated: Boolean)
+
+    /** Filming mode: play through the highlights by itself (see [Showcase]). */
+    val showcase: Boolean get() = false
 }
 
 private const val NIGHT_LUX = 3f
@@ -158,9 +161,13 @@ fun StandbyRoot(host: StandbyHost) {
     val context = LocalContext.current
     val store = remember { SettingsStore.get(context) }
     val settings by store.settings.collectAsState()
-    val data = rememberStandbyData(settings)
-    val update: ((AppSettings) -> AppSettings) -> Unit = { store.update(it) }
-    val motion = Motion.of(settings.motion)
+    val liveData = rememberStandbyData(settings)
+    val data = if (host.showcase) remember(liveData) { Showcase.fillIn(liveData) } else liveData
+    // filming mode changes nothing in the saved settings
+    val update: ((AppSettings) -> AppSettings) -> Unit = { if (!host.showcase) store.update(it) }
+    // ... and shows every effect, floating digits included
+    val motion = if (host.showcase) Motion(screens = true, pages = true, backdrop = true, springs = true, floating = true)
+    else Motion.of(settings.motion)
     val scope = rememberCoroutineScope()
 
     // --- arriving and leaving: Dockside fades and settles in rather than cutting in
@@ -178,7 +185,7 @@ fun StandbyRoot(host: StandbyHost) {
     val pager = rememberPagerState(initialPage = remember { settings.chargerViews[plug] ?: Views.WIDGETS }) { Views.COUNT }
     LaunchedEffect(pager.settledPage) {
         delay(1200) // after the swipe has settled, so saving never interrupts an animation
-        store.update { it.copy(chargerViews = it.chargerViews + (plug to pager.settledPage)) }
+        if (!host.showcase) store.update { it.copy(chargerViews = it.chargerViews + (plug to pager.settledPage)) }
     }
 
     var editWidgets by remember { mutableStateOf<StackSide?>(null) }
@@ -241,7 +248,7 @@ fun StandbyRoot(host: StandbyHost) {
             // rather than going dark on a guess from the clock
             val dark = lux?.let { it < DARK_ROOM_LUX } ?: false
             // a ringing alarm (and its summary) keeps the screen awake
-            val alarm = ClockEvents.ringing.value != null || alarmUp
+            val alarm = ClockEvents.ringing.value != null || alarmUp || host.showcase
             sleeping = if (alarm) false else when (settings.displayOff) {
                 DisplayOff.NEVER -> false
                 DisplayOff.AFTER_20_SECONDS -> idle > 20_000
@@ -328,6 +335,44 @@ fun StandbyRoot(host: StandbyHost) {
     }
 
     // the alarm screen shows its sky in full colour, even when Night Mode is on
+    // --- filming mode: the show itself
+    if (host.showcase) {
+        LaunchedEffect(Unit) {
+            delay(1500)
+            pager.animateScrollToPage(Views.CLOCK)
+            while (true) {
+                for ((style, ms) in Showcase.faces) {
+                    Showcase.showClock(style); delay(ms)
+                }
+                pager.animateScrollToPage(Views.WIDGETS, animationSpec = tween(1600, easing = FastOutSlowInEasing))
+                delay(3500)
+                // music starts: the player grows out of the bubble, then is closed into it
+                LiveEvents.publishMedia(Showcase.demoTrack())
+                delay(7000)
+                dismissedApp = "io.github.dockside.demo"; showPlayer = false
+                delay(2500)
+                LiveEvents.publishMedia(null)
+                delay(800)
+                // the alarm, then "More"
+                ClockEvents.demo()
+                delay(5500)
+                ClockEvents.dismissScreen(); showSummary = true
+                delay(6500)
+                showSummary = false
+                delay(900)
+                pager.animateScrollToPage(Views.CLOCK, animationSpec = tween(1600, easing = FastOutSlowInEasing))
+                delay(500)
+            }
+        }
+        DisposableEffect(Unit) {
+            onDispose {
+                Showcase.showClock(null)
+                LiveEvents.publishMedia(null)
+                if (ClockEvents.ringing.value?.demo == true) ClockEvents.dismissScreen()
+            }
+        }
+    }
+
     val nightFraction by animateFloatAsState(if (night && ringing == null && !showSummary) 1f else 0f, tween(1800), label = "night")
     NightFilter(nightFraction)
     val sleepAlpha by animateFloatAsState(if (sleeping) 1f else 0f, tween(if (sleeping) 1200 else 350), label = "sleep")

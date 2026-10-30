@@ -18,6 +18,7 @@ import io.github.dockside.service.MonitorService
 /** Full-screen Dockside shown over the lock screen. */
 class StandbyActivity : ComponentActivity(), StandbyHost {
     override val exitOnUndock get() = !intent.getBooleanExtra(EXTRA_PREVIEW, false)
+    override val showcase get() = intent.getBooleanExtra(EXTRA_SHOWCASE, false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,6 +142,9 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
     companion object {
         /** Opened from settings: stay open even when not charging or held upright. */
         const val EXTRA_PREVIEW = "preview"
+
+        /** With [EXTRA_PREVIEW]: filming mode, Dockside plays through its highlights by itself. */
+        const val EXTRA_SHOWCASE = "showcase"
 
         /** When Dockside was last on screen (here or as the screen saver), for the alarm takeover. */
         @Volatile

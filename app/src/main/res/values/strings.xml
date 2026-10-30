@@ -167,4 +167,6 @@
     <string name="summary_no_weather">No weather yet</string>
     <string name="summary_battery">Phone</string>
     <string name="summary_next_alarm">Next alarm</string>
+    <string name="showcase">Filming mode</string>
+    <string name="showcase_desc">Dockside plays through clock faces, page turns, the player and the alarm by itself, so you can record a video. Press Back to leave.</string>
 </resources>
