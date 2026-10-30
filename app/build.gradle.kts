@@ -22,11 +22,12 @@ android {
 
     defaultConfig {
         applicationId = "io.github.dockside"
-        minSdk = 27
+        // Android 7.0: old tablets make good living-room clocks
+        minSdk = 24
         targetSdk = 35
         // Bump both for every release: versionCode is the build number shown in Settings.
-        versionCode = 13
-        versionName = "1.10.0"
+        versionCode = 14
+        versionName = "1.11.0"
         buildConfigField(
             "String", "BUILD_DATE",
             "\"" + LocalDate.now(ZoneOffset.UTC).toString() + "\"",
@@ -55,6 +56,8 @@ android {
     }
 
     compileOptions {
+        // java.time on Android 7.x
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -74,6 +77,7 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

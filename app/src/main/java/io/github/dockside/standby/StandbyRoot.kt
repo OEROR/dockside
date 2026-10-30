@@ -627,7 +627,10 @@ internal fun NowPlayingFull(m: MediaInfo, onDismiss: () -> Unit) {
         val phase by drift.animateFloat(0f, 2 * PI.toFloat(), infiniteRepeatable(tween(48_000, easing = LinearEasing)), label = "phase")
         Crossfade(track, animationSpec = tween(900), label = "backdrop") { t ->
             val glow = remember(t.art) {
-                t.art?.let { runCatching { android.graphics.Bitmap.createScaledBitmap(it, 24, 24, true).asImageBitmap() }.getOrNull() }
+                // with a real blur (Android 12+) a little detail helps; without it a tinier copy
+                // stretched with filtering is what reads as blurred
+                val px = if (android.os.Build.VERSION.SDK_INT >= 31) 24 else 10
+                t.art?.let { runCatching { android.graphics.Bitmap.createScaledBitmap(it, px, px, true).asImageBitmap() }.getOrNull() }
             }
             if (glow != null) {
                 // The cover, stretched over the whole screen and heavily blurred. The blur is
@@ -707,11 +710,15 @@ internal fun NowPlayingFull(m: MediaInfo, onDismiss: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.weight(0.6f))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    val dim = Color.White.copy(alpha = 0.4f)
-                    CircleButton(Glyphs.Previous, h * 0.22f, tint = dim) { LiveEvents.previous() }
-                    CircleButton(if (m.playing) Glyphs.Pause else Glyphs.Play, h * 0.26f) { LiveEvents.playPause() }
-                    CircleButton(Glyphs.Next, h * 0.22f, tint = dim) { LiveEvents.next() }
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    // sized by height, but never wider than the column (narrower on tablets)
+                    val unit = minOf(h, maxWidth * 1.2f)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        val dim = Color.White.copy(alpha = 0.4f)
+                        CircleButton(Glyphs.Previous, unit * 0.22f, tint = dim) { LiveEvents.previous() }
+                        CircleButton(if (m.playing) Glyphs.Pause else Glyphs.Play, unit * 0.26f) { LiveEvents.playPause() }
+                        CircleButton(Glyphs.Next, unit * 0.22f, tint = dim) { LiveEvents.next() }
+                    }
                 }
                 Spacer(Modifier.weight(0.6f))
                 if (m.durationMs > 0) SeekBar(m, 11.dp, fill = Color.White.copy(alpha = 0.6f))

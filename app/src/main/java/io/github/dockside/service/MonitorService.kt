@@ -226,6 +226,7 @@ class MonitorService : Service(), SensorEventListener {
         private const val ACTION_DISARM = "io.github.dockside.DISARM"
 
         fun createChannels(context: Context) {
+            if (android.os.Build.VERSION.SDK_INT < 26) return // no channels before Android 8
             val nm = context.getSystemService(NotificationManager::class.java) ?: return
             nm.createNotificationChannel(
                 NotificationChannel(

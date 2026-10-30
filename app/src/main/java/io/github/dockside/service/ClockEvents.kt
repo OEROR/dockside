@@ -86,7 +86,7 @@ object ClockEvents {
         val extras = n.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
-        val words = (title + " " + text + " " + (n.channelId ?: "")).lowercase()
+        val words = (title + " " + text + " " + ((if (android.os.Build.VERSION.SDK_INT >= 26) n.channelId else null) ?: "")).lowercase()
         val timerWords = has(words, "timer", "таймер")
 
         // Ringing: an alarm-category notification that wants to take over the screen.

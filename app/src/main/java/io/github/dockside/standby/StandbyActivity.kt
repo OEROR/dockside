@@ -22,8 +22,13 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         isShowing = true
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -49,7 +54,8 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
         super.onResume()
         lastSeenAt = System.currentTimeMillis()
         // Only light the screen up on the launch itself, not when coming back from screen-off.
-        setTurnScreenOn(false)
+        if (Build.VERSION.SDK_INT >= 27) setTurnScreenOn(false)
+        else @Suppress("DEPRECATION") window.clearFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
     }
 
     /** Home or Recents: the user left Dockside on purpose. */
@@ -68,8 +74,26 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
         if (km == null || !km.isKeyguardLocked) {
             onUnlocked(); return
         }
-        km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
-            override fun onDismissSucceeded() = onUnlocked()
+        if (Build.VERSION.SDK_INT >= 26) {
+            km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
+                override fun onDismissSucceeded() = onUnlocked()
+            })
+            return
+        }
+        // Android 7: ask the window to dismiss the keyguard (the PIN pad shows if there is one),
+        // then carry on once it is gone; give up after a minute.
+        @Suppress("DEPRECATION")
+        window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
+        val handler = android.os.Handler(mainLooper)
+        val started = System.currentTimeMillis()
+        handler.post(object : Runnable {
+            override fun run() {
+                if (!km.isKeyguardLocked) {
+                    @Suppress("DEPRECATION")
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
+                    onUnlocked()
+                } else if (System.currentTimeMillis() - started < 60_000) handler.postDelayed(this, 300)
+            }
         })
     }
 

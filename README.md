@@ -54,7 +54,7 @@ The screenshots are rendered by the Paparazzi tests in [`ScreenshotTest.kt`](app
 
 ## Install
 
-Download `Dockside-x.y.z.apk` from [Releases](../../releases) and open it on the phone (allow installing from your browser or file manager). Requires **Android 8.1+**; Android 12+ is recommended.
+Download `Dockside-x.y.z.apk` from [Releases](../../releases) and open it on the phone (allow installing from your browser or file manager). Requires **Android 7.0+**, so old phones and tablets make good bedside or living-room clocks; on Android 12+ the player background is truly blurred.
 
 ### First-run setup
 
