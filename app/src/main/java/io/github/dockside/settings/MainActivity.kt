@@ -238,6 +238,26 @@ private fun SettingsScreen() {
             }
         }
         item {
+            Header(R.string.section_alarm)
+            Section {
+                SwitchRow(stringResource(R.string.alarm_takeover), stringResource(R.string.alarm_takeover_desc), s.alarmTakeover) { on ->
+                    store.update { it.copy(alarmTakeover = on) }
+                }
+                Divider()
+                Button(
+                    onClick = {
+                        io.github.dockside.service.ClockEvents.demo()
+                        context.startActivity(
+                            Intent(context, StandbyActivity::class.java)
+                                .putExtra(StandbyActivity.EXTRA_PREVIEW, true)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                ) { Text(stringResource(R.string.alarm_demo), fontWeight = FontWeight.Bold) }
+            }
+        }
+        item {
             Header(R.string.section_motion)
             Section {
                 val m = s.motion

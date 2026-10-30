@@ -149,4 +149,23 @@
     <string name="motion_springs_desc">Цифры и виджеты встают на место с лёгким отскоком</string>
     <string name="motion_floating">Плавающие цифры</string>
     <string name="motion_floating_desc">На экране часов цифры постоянно и заметно плавают</string>
+    <string name="section_alarm">Будильник и таймер</string>
+    <string name="alarm_takeover">Показывать будильник в Dockside</string>
+    <string name="alarm_takeover_desc">Звонящий будильник и таймер из «Часов» показываются в Dockside, а кнопки нажимают кнопки «Часов». Нужны доступ к уведомлениям и «Поверх других приложений»</string>
+    <string name="alarm_demo">Показать экран будильника</string>
+    <string name="greet_morning">Доброе утро</string>
+    <string name="greet_day">Добрый день</string>
+    <string name="greet_evening">Добрый вечер</string>
+    <string name="greet_night">Доброй ночи</string>
+    <string name="alarm_close">Закрыть</string>
+    <string name="alarm_more">Подробнее</string>
+    <string name="alarm_snooze">Отложить</string>
+    <string name="timer_done">Время вышло</string>
+    <string name="timer">Таймер</string>
+    <string name="timer_stop">Стоп</string>
+    <string name="summary_today">Сегодня</string>
+    <string name="summary_no_events">Ничего не запланировано</string>
+    <string name="summary_no_weather">Погода ещё загружается</string>
+    <string name="summary_battery">Телефон</string>
+    <string name="summary_next_alarm">Следующий будильник</string>
 </resources>

@@ -146,6 +146,12 @@ class ScreenshotTest {
     @Test fun deviceIcons() = shot { io.github.dockside.ui.widgets.DeviceIconsPreview() }
     @Test fun nowPlaying() = shot { NowPlayingFull(data.media!!) {} }
 
+    @Test fun alarmRinging() = shot {
+        io.github.dockside.ui.alarm.AlarmRinging(
+            io.github.dockside.service.RingingClock("k", "clock", io.github.dockside.service.ClockKind.ALARM, "", emptyList()), data, animateIn = false,
+        ) {}
+    }
+    @Test fun daySummary() = shot { io.github.dockside.ui.alarm.DaySummary(data, animateIn = false) {} }
     /** A drawn stand-in cover (warm sunset blocks) to show the blurred backdrop. */
     @Test fun nowPlayingCover() = shot {
         val art = android.graphics.Bitmap.createBitmap(240, 240, android.graphics.Bitmap.Config.ARGB_8888).apply {

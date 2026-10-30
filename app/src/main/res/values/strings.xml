@@ -148,4 +148,23 @@
     <string name="motion_springs_desc">Digits and widgets settle with a little bounce</string>
     <string name="motion_floating">Floating digits</string>
     <string name="motion_floating_desc">On the clock screen the digits drift about all the time, clearly visible</string>
+    <string name="section_alarm">Alarm and timer</string>
+    <string name="alarm_takeover">Show alarms in Dockside</string>
+    <string name="alarm_takeover_desc">A ringing alarm or timer from the Clock app appears in Dockside; its buttons press the Clock app\'s own. Needs notification access and \"Display over other apps\"</string>
+    <string name="alarm_demo">Try the alarm screen</string>
+    <string name="greet_morning">Good morning</string>
+    <string name="greet_day">Good afternoon</string>
+    <string name="greet_evening">Good evening</string>
+    <string name="greet_night">Good night</string>
+    <string name="alarm_close">Close</string>
+    <string name="alarm_more">More</string>
+    <string name="alarm_snooze">Snooze</string>
+    <string name="timer_done">Time\'s up</string>
+    <string name="timer">Timer</string>
+    <string name="timer_stop">Stop</string>
+    <string name="summary_today">Today</string>
+    <string name="summary_no_events">Nothing planned</string>
+    <string name="summary_no_weather">No weather yet</string>
+    <string name="summary_battery">Phone</string>
+    <string name="summary_next_alarm">Next alarm</string>
 </resources>

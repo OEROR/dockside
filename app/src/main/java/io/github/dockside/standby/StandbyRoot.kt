@@ -59,9 +59,14 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.blur
 import io.github.dockside.ui.common.LocalMotion
+import io.github.dockside.service.ClockEvents
+import io.github.dockside.ui.alarm.AlarmRinging
+import io.github.dockside.ui.alarm.DaySummary
 import io.github.dockside.ui.common.Motion
 import io.github.dockside.ui.common.rememberTicker
 import androidx.compose.ui.geometry.Size
@@ -180,6 +185,9 @@ fun StandbyRoot(host: StandbyHost) {
     var editClock by remember { mutableStateOf(false) }
     var editPhotos by remember { mutableStateOf(false) }
     val editing = editWidgets != null || editClock || editPhotos
+    // the alarm's day summary (after "More"); declared early so the display rules can see it
+    var showSummary by remember { mutableStateOf(false) }
+    val alarmUp by rememberUpdatedState(showSummary)
 
     // --- activity, light and motion
     var lastTouch by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
@@ -232,7 +240,9 @@ fun StandbyRoot(host: StandbyHost) {
             // only a real light reading counts: without a working sensor the screen stays on
             // rather than going dark on a guess from the clock
             val dark = lux?.let { it < DARK_ROOM_LUX } ?: false
-            sleeping = when (settings.displayOff) {
+            // a ringing alarm (and its summary) keeps the screen awake
+            val alarm = ClockEvents.ringing.value != null || alarmUp
+            sleeping = if (alarm) false else when (settings.displayOff) {
                 DisplayOff.NEVER -> false
                 DisplayOff.AFTER_20_SECONDS -> idle > 20_000
                 DisplayOff.AUTOMATIC -> dark && idle > 30_000
@@ -273,6 +283,19 @@ fun StandbyRoot(host: StandbyHost) {
         }
     }
 
+    // --- the clock app's alarms, timers and stopwatch, shown Dockside's way
+    val ringingNow by ClockEvents.ringing.collectAsState()
+    val ringing = ringingNow?.takeIf { settings.alarmTakeover || it.demo }
+    var lastRinging by remember { mutableStateOf(ringing) }
+    // a demo from the settings must not come back the next time Dockside opens
+    DisposableEffect(Unit) { onDispose { if (ClockEvents.ringing.value?.demo == true) ClockEvents.dismissScreen() } }
+    LaunchedEffect(ringing) {
+        if (ringing != null) {
+            lastRinging = ringing; showSummary = false
+            lastTouch = SystemClock.elapsedRealtime(); sleeping = false
+        }
+    }
+
     // --- Now Playing goes full screen when playback starts
     var showPlayer by remember { mutableStateOf(false) }
     // Closing the player collapses that app's music into the bubble until it stops playing;
@@ -304,7 +327,8 @@ fun StandbyRoot(host: StandbyHost) {
         }
     }
 
-    val nightFraction by animateFloatAsState(if (night) 1f else 0f, tween(1800), label = "night")
+    // the alarm screen shows its sky in full colour, even when Night Mode is on
+    val nightFraction by animateFloatAsState(if (night && ringing == null && !showSummary) 1f else 0f, tween(1800), label = "night")
     NightFilter(nightFraction)
     val sleepAlpha by animateFloatAsState(if (sleeping) 1f else 0f, tween(if (sleeping) 1200 else 350), label = "sleep")
 
@@ -328,7 +352,7 @@ fun StandbyRoot(host: StandbyHost) {
         HorizontalPager(
             state = pager,
             flingBehavior = easyFling(pager),
-            userScrollEnabled = !editing && !showPlayer,
+            userScrollEnabled = !editing && !showPlayer && ringing == null && !showSummary,
             beyondViewportPageCount = 1,
             modifier = Modifier.fillMaxSize(),
         ) { page ->
@@ -447,6 +471,17 @@ fun StandbyRoot(host: StandbyHost) {
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible = showSummary,
+            enter = fadeIn(tween(700)) + scaleIn(tween(700), initialScale = 1.05f),
+            exit = fadeOut(tween(500)) + scaleOut(tween(500), targetScale = 0.96f),
+        ) { DaySummary(data) { showSummary = false } }
+        AnimatedVisibility(
+            visible = ringing != null,
+            enter = fadeIn(tween(900)) + scaleIn(tween(900), initialScale = 1.08f),
+            exit = fadeOut(tween(600)) + scaleOut(tween(600), targetScale = 1.04f),
+        ) { lastRinging?.let { r -> AlarmRinging(r, data) { showSummary = true } } }
 
         if (sleepAlpha > 0f) {
             Box(

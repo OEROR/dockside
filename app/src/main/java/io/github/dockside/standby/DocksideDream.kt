@@ -55,6 +55,7 @@ class DocksideDream : DreamService(), StandbyHost, LifecycleOwner, ViewModelStor
     }
 
     override fun onDreamingStopped() {
+        StandbyActivity.lastSeenAt = System.currentTimeMillis()
         registry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         super.onDreamingStopped()
     }

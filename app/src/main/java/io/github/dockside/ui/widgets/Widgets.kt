@@ -145,7 +145,11 @@ fun relevance(kind: WidgetKind, data: StandbyData, now: Long): Float {
     val hour = now.toLocal().hour
     val nextEvent = data.events.firstOrNull { !it.allDay && it.end > now }
     return when (kind) {
-        WidgetKind.NOW_PLAYING -> if (data.media?.playing == true) 1f else 0f
+        WidgetKind.NOW_PLAYING -> when {
+            data.media?.playing == true -> 1f
+            data.media != null -> 0.45f // paused: stays put unless something clearly matters more
+            else -> 0f
+        }
         WidgetKind.UP_NEXT -> nextEvent?.let { if (it.begin - now < 45 * 60_000) 0.9f else 0.2f } ?: 0f
         WidgetKind.CALENDAR_DAY -> if (nextEvent != null && nextEvent.begin - now < 3 * 3600_000) 0.6f else 0.35f
         WidgetKind.ALARM -> data.nextAlarm?.let { if (hour >= 21 || hour < 5) 0.7f else 0.1f } ?: 0f

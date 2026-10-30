@@ -88,6 +88,8 @@ data class AppSettings(
     val manualLocation: ManualLocation? = null,
     val tempUnit: TempUnit = TempUnit.CELSIUS,
     val motion: MotionPrefs = MotionPrefs(),
+    /** Show ringing alarms and timers, and running stopwatches, Dockside's way. */
+    val alarmTakeover: Boolean = true,
 ) {
     fun colorIndex(style: ClockStyle) = clockColors[style] ?: defaultColor(style)
 
@@ -180,6 +182,7 @@ class SettingsStore private constructor(context: Context) {
                 JSONObject().put("name", it.name).put("lat", it.lat).put("lon", it.lon)
             })
             .put("tempUnit", s.tempUnit.name)
+            .put("alarmTakeover", s.alarmTakeover)
             .put("motion", JSONObject()
                 .put("enabled", s.motion.enabled).put("screens", s.motion.screens).put("pages", s.motion.pages)
                 .put("backdrop", s.motion.backdrop).put("springs", s.motion.springs).put("floating", s.motion.floating))
@@ -215,6 +218,7 @@ class SettingsStore private constructor(context: Context) {
                     ManualLocation(it.optString("name"), it.optDouble("lat"), it.optDouble("lon"))
                 },
                 tempUnit = enumOrNull<TempUnit>(o.optString("tempUnit")) ?: d.tempUnit,
+                alarmTakeover = o.optBoolean("alarmTakeover", d.alarmTakeover),
                 motion = o.optJSONObject("motion")?.let { m ->
                     val dm = d.motion
                     MotionPrefs(

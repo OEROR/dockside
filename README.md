@@ -25,6 +25,7 @@ Dockside is an independent, open-source bedside mode for Android, inspired by th
 | **Display** | *Turn display off*: **Automatically** (in a dark, still room), **After 20 seconds**, or **Never**. **Motion to Wake** uses the accelerometer. |
 | **Full-screen notifications** | New notifications appear as large cards. The **Show Preview on Tap Only** setting hides their content until tapped. |
 | **Now Playing** | When playback starts, a full-screen player grows out of the bubble at the top: large artwork over a blurred, slowly drifting copy of the cover, a volume slider, progress and controls. Drag or tap the progress bar to jump within the track (also in the Now Playing widget). Close the player and the music shrinks into a small dark circle at the top of the screen whose bars move with the music's loudness, in a colour taken from the cover; tap it to bring the player back. |
+| **Alarm screen** | When the Clock app's alarm or timer rings while Dockside is up, Dockside shows it its own way: a sky for the time of day (sunrise, daylight, sunset or stars), a greeting, the time and two buttons. **Close** presses the Clock app's own dismiss button; **More** dismisses and opens a summary of the day (weather with the next hours, today's events, the phone's charge and the next alarm). Snooze appears when the alarm offers it. Needs notification access and *Display over other apps*; *Try the alarm screen* in Settings shows it at any time. |
 | **Super animations** | On by default, each effect with its own switch: the player opens from and closes into its bubble, Dockside fades in and out, pages turn like cards while swiping, the player background drifts, digits and widgets settle with a little bounce. *Floating digits* (off by default) makes the clock digits drift about all the time, clearly visible. |
 | **Per-charger memory** | The last view is remembered per charger type (AC, USB, wireless, dock). |
 | **Screen saver** | Dockside is also an Android **screen saver (Daydream)**, so the system can start it by itself while charging or docked. |
@@ -46,7 +47,8 @@ Dockside is an independent, open-source bedside mode for Android, inspired by th
 | ![Tall clock](docs/screenshots/clock-tall.png) | ![Photos overlay](docs/screenshots/photos.png) |
 | ![Square clock and city time](docs/screenshots/square-city.png) | ![Device batteries and weather](docs/screenshots/devices-weather.png) |
 | ![Collapsed Now Playing](docs/screenshots/now-playing-bubble.png) | ![Device pictograms](docs/screenshots/device-icons.png) |
-| ![Now Playing with a cover](docs/screenshots/now-playing-cover.png) | |
+| ![Now Playing with a cover](docs/screenshots/now-playing-cover.png) | ![Alarm screen](docs/screenshots/alarm.png) |
+| ![Day summary](docs/screenshots/day-summary.png) | |
 
 The screenshots are rendered by the Paparazzi tests in [`ScreenshotTest.kt`](app/src/test/java/io/github/dockside/ScreenshotTest.kt). The Night Mode image applies the app's own red colour matrix to a screenshot.
 
@@ -131,4 +133,4 @@ Android has no system hook for this mode, so Dockside watches the activation con
 
 ### Кратко по-русски
 
-**Dockside** — независимый прикроватный режим для Android с открытым кодом. Когда телефон заряжается, лежит боком и заблокирован, он превращается в прикроватные часы с виджетами, фоторамкой и восемью циферблатами. В темноте экран становится красным. Свайп вбок переключает экраны, свайп вверх или вниз меняет виджет, альбом или циферблат. Долгое нажатие открывает редактирование. В настройках есть раздел «Анимации»: плавные экраны, объёмное листание, живой фон плеера, пружинистые цифры и (выключено по умолчанию) постоянно плавающие цифры. Сборка: `./gradlew assembleDebug`. Готовый APK — в разделе Releases.
+**Dockside** — независимый прикроватный режим для Android с открытым кодом. Когда телефон заряжается, лежит боком и заблокирован, он превращается в прикроватные часы с виджетами, фоторамкой и восемью циферблатами. В темноте экран становится красным. Свайп вбок переключает экраны, свайп вверх или вниз меняет виджет, альбом или циферблат. Долгое нажатие открывает редактирование. В настройках есть раздел «Анимации»: плавные экраны, объёмное листание, живой фон плеера, пружинистые цифры и (выключено по умолчанию) постоянно плавающие цифры. Звонящий будильник и таймер из «Часов» Dockside показывает по-своему: небо под время суток, приветствие и кнопки «Закрыть» и «Подробнее» (сводка: погода, события, заряд). Сборка: `./gradlew assembleDebug`. Готовый APK — в разделе Releases.

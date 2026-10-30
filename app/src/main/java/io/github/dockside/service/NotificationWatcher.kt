@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import io.github.dockside.standby.StandbyActivity
 
 data class IncomingNotification(
     val key: String,
@@ -102,7 +103,31 @@ class NotificationWatcher : NotificationListenerService() {
         bindControllers(list.orEmpty())
     }
 
+    override fun onNotificationRemoved(sbn: StatusBarNotification) = ClockEvents.onRemoved(sbn)
+
+    /**
+     * An alarm's own screen opens on top of Dockside. If Dockside was just showing (so the phone
+     * is on its charger) and the user wants it, come back on top so the alarm is shown Dockside's
+     * way; the clock app keeps ringing until one of its buttons is pressed. Starting from the
+     * background needs the "display over other apps" permission.
+     */
+    private fun bringDocksideBack() {
+        val settings = io.github.dockside.data.SettingsStore.get(this).current
+        if (!settings.alarmTakeover || !Settings.canDrawOverlays(this)) return
+        val seen = StandbyActivity.lastSeenAt
+        if (!StandbyActivity.isShowing && System.currentTimeMillis() - seen > 2 * 60_000) return
+        handler.postDelayed({
+            runCatching {
+                startActivity(
+                    android.content.Intent(this, StandbyActivity::class.java)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                )
+            }
+        }, 800)
+    }
+
     override fun onListenerConnected() {
+        runCatching { activeNotifications?.forEach { if (it.packageName != packageName) ClockEvents.onPosted(it) } }
         val sm = getSystemService(MediaSessionManager::class.java) ?: return
         sessionManager = sm
         val me = ComponentName(this, NotificationWatcher::class.java)
@@ -120,6 +145,10 @@ class NotificationWatcher : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification, rankingMap: RankingMap?) {
         val n = sbn.notification
+        if (sbn.packageName != packageName && ClockEvents.onPosted(sbn)) {
+            if (ClockEvents.ringing.value?.key == sbn.key) bringDocksideBack()
+            return
+        }
         if (sbn.packageName == packageName || sbn.isOngoing) return
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         if (n.category == Notification.CATEGORY_TRANSPORT || n.category == Notification.CATEGORY_SERVICE) return

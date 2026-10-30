@@ -40,8 +40,14 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
         setIntent(intent)
     }
 
+    override fun onPause() {
+        super.onPause()
+        lastSeenAt = System.currentTimeMillis()
+    }
+
     override fun onResume() {
         super.onResume()
+        lastSeenAt = System.currentTimeMillis()
         // Only light the screen up on the launch itself, not when coming back from screen-off.
         setTurnScreenOn(false)
     }
@@ -111,6 +117,10 @@ class StandbyActivity : ComponentActivity(), StandbyHost {
     companion object {
         /** Opened from settings: stay open even when not charging or held upright. */
         const val EXTRA_PREVIEW = "preview"
+
+        /** When Dockside was last on screen (here or as the screen saver), for the alarm takeover. */
+        @Volatile
+        var lastSeenAt = 0L
 
         @Volatile
         var isShowing = false

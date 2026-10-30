@@ -88,7 +88,9 @@ private fun AppSettings.withStack(side: StackSide, s: StackConfig) =
 private fun effectiveWidgets(stack: StackConfig, data: StandbyData, suggest: Boolean): List<WidgetKind> {
     val base = stack.widgets
     if (!stack.suggestions || !suggest) return base
-    return if (data.media?.playing == true && WidgetKind.NOW_PLAYING !in base) listOf(WidgetKind.NOW_PLAYING) + base else base
+    // Paused music keeps its widget (the pause button must not make it vanish); it goes once the
+    // player's session ends.
+    return if (data.media != null && WidgetKind.NOW_PLAYING !in base) listOf(WidgetKind.NOW_PLAYING) + base else base
 }
 
 @Composable
@@ -165,6 +167,18 @@ private fun SmartStack(
     LaunchedEffect(pager.settledPage) {
         if (!editing) onIndex(pager.settledPage)
         lastTouch = System.currentTimeMillis()
+    }
+    // When a suggested widget comes or goes, the indices shift: keep the widget that was on
+    // screen, except that music which just started is brought forward.
+    var shown by remember { mutableStateOf(widgets) }
+    LaunchedEffect(widgets) {
+        val before = shown
+        shown = widgets
+        if (before == widgets) return@LaunchedEffect
+        val arrived = WidgetKind.NOW_PLAYING in widgets && WidgetKind.NOW_PLAYING !in before
+        val keep = if (arrived) WidgetKind.NOW_PLAYING else before.getOrNull(pager.currentPage)
+        val target = keep?.let { widgets.indexOf(it) } ?: -1
+        if (target >= 0 && target != pager.currentPage) pager.scrollToPage(target)
     }
     // Smart Rotate: surface the most relevant widget when the user isn't interacting.
     LaunchedEffect(stack.smartRotate, widgets, editing) {
